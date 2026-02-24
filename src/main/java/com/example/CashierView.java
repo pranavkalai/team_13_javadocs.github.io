@@ -19,6 +19,8 @@ import javafx.scene.shape.Line;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.util.List;
+
 public class CashierView {
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
     private ObservableList<CartItem> cartItems = FXCollections.observableArrayList();
@@ -38,8 +40,11 @@ public class CashierView {
         GridPane grid = new GridPane();
         grid.setHgap(20); grid.setVgap(20);
         
-        for (int i = 0; i < 20; i++) {
-            grid.add(createProductCard(i,"Boba tea " + i, 5.00), i % 3, i / 3);
+        List<Product> products = Database.getAllProducts();
+        int index = 0;
+        for (Product p : products) {
+            grid.add(createProductCard(p), index % 3, index / 3);
+            index++;
         }
 
         ScrollPane scrollPane = new ScrollPane(grid);
@@ -114,7 +119,7 @@ public class CashierView {
         popup.close(); 
     }
 
-    private VBox createProductCard(int id, String name, double price) {
+    private VBox createProductCard(Product p) {
         VBox card = new VBox();
         card.setStyle(BORDER);
         StackPane img = new StackPane(new Line(0,0,200,150), new Line(200,0,0,150));
@@ -122,14 +127,14 @@ public class CashierView {
         
         Button add = new Button("Add");
         add.setStyle(BORDER);
-        add.setOnAction(e -> showCustomizationDialog(id, name, price));
+        add.setOnAction(e -> showCustomizationDialog(p.getMenuID(), p.getName(), p.getCost()));
 
-        HBox footer = new HBox(new Label("$" + price), new Region(), add);
+        HBox footer = new HBox(new Label("$" + String.format("%.2f", p.getCost())), new Region(), add);
         HBox.setHgrow(footer.getChildren().get(1), Priority.ALWAYS);
         footer.setPadding(new Insets(5));
         footer.setStyle("-fx-border-color: black transparent transparent transparent;");
 
-        card.getChildren().addAll(img, new Label(name), footer);
+        card.getChildren().addAll(img, new Label(p.getName()), footer);
         return card;
     }
 
