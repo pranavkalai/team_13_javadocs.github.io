@@ -17,6 +17,7 @@ public class Database {
         return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 
+    
     public static void submitOrder(String customer, double total, int empID, int menuID, String ice, String sugar, String topping) {
         String ordSql = "INSERT INTO orders (orderID, customerName, costTotal, employeeID, orderDateTime) VALUES (?, ?, ?, ?, ?)";
         String itemSql = "INSERT INTO order_items (ID, menuID, orderID, quantity, iceLevel, sugarLevel, topping, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
