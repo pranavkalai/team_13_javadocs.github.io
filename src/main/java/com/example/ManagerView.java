@@ -16,6 +16,8 @@ import javafx.scene.shape.Line;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.util.List;
+
 public class ManagerView {
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
     private StackPane displayArea = new StackPane();
@@ -94,10 +96,17 @@ public class ManagerView {
         GridPane stockGrid = new GridPane();
         stockGrid.setHgap(10); stockGrid.setVgap(10);
         
-        // Pulling initial levels from BackendController
-        stockGrid.add(createStockCell("Boba", BackendController.getMockInventoryLevel("Boba")), 0, 0);
-        stockGrid.add(createStockCell("Sugar", BackendController.getMockInventoryLevel("Sugar")), 1, 0);
-        stockGrid.add(createStockCell("Milk", BackendController.getMockInventoryLevel("Milk")), 2, 0);
+        List<InventoryItem> inventory = Database.getAllInventory();
+        int row = 0;
+        int col = 0;
+        for (InventoryItem item : inventory) {
+            stockGrid.add(createStockCell(item.getName(), item.getInventoryNum() + " units"), col, row);
+            col++;
+            if (col > 2) {
+                col = 0;
+                row++;
+            }
+        }
         
         return stockGrid;
     }
@@ -126,6 +135,7 @@ public class ManagerView {
     // --- TEAM TAB ---
     private VBox createTeamTab() {
         VBox teamLayout = new VBox(10);
+        tableRowsContainer.getChildren().clear();
         
         HBox header = new HBox();
         Label teamTitle = new Label("Team Roster");
@@ -142,8 +152,13 @@ public class ManagerView {
         tableHead.setStyle("-fx-background-color: #eee; " + BORDER);
         tableHead.getChildren().addAll(
             createHeaderCell("NAME", 150), createHeaderCell("ROLE", 100),
-            createHeaderCell("PAY RATE", 100), createHeaderCell("HRS WORKED", 100)
+            createHeaderCell("PAY RATE", 100), createHeaderCell("ORDERS", 100)
         );
+
+        List<Employee> employees = Database.getAllEmployees();
+        for (Employee emp : employees) {
+            addEmployeeRow(emp.getName(), emp.getJob(), String.valueOf(emp.getPay()), String.valueOf(emp.getOrderNum()));
+        }
 
         teamLayout.getChildren().addAll(header, tableHead, tableRowsContainer);
         return teamLayout;
@@ -185,12 +200,12 @@ public class ManagerView {
         dialog.show();
     }
 
-    private void addEmployeeRow(String name, String role, String pay, String hrs) {
+    private void addEmployeeRow(String name, String role, String pay, String orders) {
         HBox row = new HBox();
         row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5;");
         row.getChildren().addAll(
             createDataCell(name, 150), createDataCell(role, 100),
-            createDataCell("$" + pay + "/hr", 100), createDataCell(hrs + "h", 100)
+            createDataCell("$" + pay + "/hr", 100), createDataCell(orders, 100)
         );
         tableRowsContainer.getChildren().add(row);
     }
