@@ -1,27 +1,26 @@
 package com.example;
 
-import javafx.scene.control.MenuItem;
 public class CartItem {
     private int menuID;
     private String name;
-    private double price;
-    private String ice;
-    private String sugar;
+    private double cost;
+    private String iceLevel;
+    private String sugarLevel;
     private String topping;
 
-    public CartItem(int menuID, String name, double price, String ice, String sugar, String topping) {
+    public CartItem(int menuID, String name, double cost, String iceLevel, String sugarLevel, String topping) {
         this.menuID = menuID;
         this.name = name;
-        this.price = price;
-        this.ice = ice;
-        this.sugar = sugar;
+        this.cost = cost;
+        this.iceLevel = iceLevel;
+        this.sugarLevel = sugarLevel;
         this.topping = topping;
     }
 
 
-    public double getPrice()
+    public double getCost()
     {
-        return price;
+        return cost;
     }
 
     public int getMenuID() {
@@ -31,4 +30,17 @@ public class CartItem {
     public String getName() {
         return name;
     }
+
+    public String getIce() {
+        return iceLevel;
+    }
+
+    public String getSugar() {
+        return sugarLevel;
+    }
+
+    public String getTopping() {
+        return topping;
+    }
+
 }

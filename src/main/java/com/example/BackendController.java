@@ -14,19 +14,32 @@ public class BackendController {
      * Calculates the total price of items in the cart.
      * Maps to Page 1 of the wireframe for the "Total: $X.XX" label.
      */
-    public static double calculateCartTotal(List<String> cartItems) {
+    public static double calculateCartTotal(List<CartItem> cartItems) {
         // Mock logic: assuming all Boba tea items are $5.00 for now.
-        return cartItems.size() * 5.00;
+        return cartItems.stream().mapToDouble(CartItem::getCost).sum();
     }
 
     /**
      * Placeholder for the "Place Order" button logic.
      * In the future, this will call Database.submitOrder().
      */
-    public static void handlePlaceOrder(String customerName, List<String> cartItems) {
-        System.out.println("[FRONTEND LOGIC] Processing order for: " + customerName);
-        System.out.println("[FRONTEND LOGIC] Items: " + cartItems);
-        // Calculation logic would happen here before saving to DB
+    public static void handlePlaceOrder(String customerName, List<CartItem> cartItems) {
+        if (cartItems.isEmpty()) {
+            System.out.println("[WARN] Attempted to place order with empty cart.");
+            return;
+        }
+        try {
+            //replace with actual employeeID once we have login implemented !!!
+            int employeeID = 1;
+
+            Database.submitOrder(customerName, employeeID, cartItems);
+
+            System.out.println("[BACKEND] Order successfully saved.");
+
+        } catch (Exception e) {
+            System.out.println("[BACKEND ERROR] Failed to save order.");
+            e.printStackTrace();
+        }
     }
 
     // --- MANAGER LOGIC: TEAM ---
@@ -39,7 +52,7 @@ public class BackendController {
         if (name.isEmpty() || role.isEmpty() || pay.isEmpty() || hrs.isEmpty()) {
             return false;
         }
-        
+
         // Ensure pay and hours are actually numbers to avoid crashes later
         try {
             Double.parseDouble(pay);

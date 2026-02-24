@@ -20,7 +20,7 @@ import javafx.stage.Stage;
 
 public class CashierView {
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
-    private ObservableList<String> cartItems = FXCollections.observableArrayList();
+    private ObservableList<CartItem> cartItems = FXCollections.observableArrayList();
     private VBox cartItemsContainer = new VBox(5);
     private Label cartLabel = new Label("Cart (0)");
     private Label totalLabel = new Label("Total: $0.00");
@@ -37,10 +37,10 @@ public class CashierView {
 
         GridPane grid = new GridPane();
         grid.setHgap(20); grid.setVgap(20);
-        for (int i = 0; i < 20; i++) {
-            grid.add(createProductCard("Boba tea " + i), i % 3, i / 3);
-        }
-
+        for (int i = 0; i < 20; i++) 
+            {
+            grid.add(createProductCard( i, "Boba tea " + i, 5.00, "Normal", "Normal", "None"), i % 3, i / 3);
+            }
         ScrollPane scrollPane = new ScrollPane(grid);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
@@ -126,7 +126,8 @@ public class CashierView {
         popup.close(); 
     }
 
-    private VBox createProductCard(String name) {
+    //make product card with add button
+    private VBox createProductCard(int menuID, String name, double cost, String ice, String sugar, String topping) {
         VBox card = new VBox();
         card.setStyle(BORDER);
         StackPane img = new StackPane(new Line(0,0,200,150), new Line(200,0,0,150));
@@ -134,9 +135,9 @@ public class CashierView {
         
         Button add = new Button("Add");
         add.setStyle(BORDER);
-        add.setOnAction(e -> { cartItems.add(name); updateCartUI(); });
+        add.setOnAction(e -> { cartItems.add(new CartItem(menuID, name, cost, ice, sugar, topping)); updateCartUI(); });
 
-        HBox footer = new HBox(new Label("$5.00"), new Region(), add);
+        HBox footer = new HBox(new Label("$" + cost), new Region(), add);
         HBox.setHgrow(footer.getChildren().get(1), Priority.ALWAYS);
         footer.setPadding(new Insets(5));
         footer.setStyle("-fx-border-color: black transparent transparent transparent;");
@@ -151,8 +152,8 @@ public class CashierView {
         emptyCartPlaceholder.setVisible(empty);
         emptyCartPlaceholder.setManaged(empty);
 
-        for (String item : cartItems) {
-            HBox row = new HBox(new Label(item), new Region(), new Label("$5.00"));
+        for (CartItem item : cartItems) {
+            HBox row = new HBox(new Label(item.getName()), new Region(), new Label("$" + String.format("%.2f", item.getCost())));
             HBox.setHgrow(row.getChildren().get(1), Priority.ALWAYS);
             row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5;");
             cartItemsContainer.getChildren().add(row);
