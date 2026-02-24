@@ -6,6 +6,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.GridPane;
@@ -30,23 +31,22 @@ public class CashierView {
         HBox layout = new HBox();
         layout.setStyle("-fx-background-color: white;");
 
-        // --- MENU SECTION ---
         VBox menuSection = new VBox(15, new Label("Order"));
         menuSection.setPadding(new Insets(20));
         HBox.setHgrow(menuSection, Priority.ALWAYS);
 
         GridPane grid = new GridPane();
         grid.setHgap(20); grid.setVgap(20);
-        for (int i = 0; i < 20; i++) 
-            {
-            grid.add(createProductCard( i, "Boba tea " + i, 5.00, "Normal", "Normal", "None"), i % 3, i / 3);
-            }
+        
+        for (int i = 0; i < 20; i++) {
+            grid.add(createProductCard(i,"Boba tea " + i, 5.00), i % 3, i / 3);
+        }
+
         ScrollPane scrollPane = new ScrollPane(grid);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
         menuSection.getChildren().add(scrollPane);
 
-        // --- CART SECTION ---
         VBox cartSection = new VBox(10);
         cartSection.setPrefWidth(350);
         cartSection.setPadding(new Insets(20));
@@ -60,9 +60,7 @@ public class CashierView {
         placeOrder.setStyle(BORDER);
         
         placeOrder.setOnAction(e -> {
-            if (!cartItems.isEmpty()) {
-                showCheckoutDialog(); 
-            }
+            if (!cartItems.isEmpty()) { showCheckoutDialog(); }
         });
 
         Region spacer = new Region();
@@ -86,13 +84,9 @@ public class CashierView {
         Label title = new Label("SELECT PAYMENT METHOD");
         title.setStyle("-fx-font-weight: bold; -fx-font-size: 14;");
 
-        Button cashBtn = createPaymentBtn("CASH");
-        Button creditBtn = createPaymentBtn("CREDIT");
-        Button debitBtn = createPaymentBtn("DEBIT");
-
-        cashBtn.setOnAction(e -> finalizeOrder("CASH", popup));
-        creditBtn.setOnAction(e -> finalizeOrder("CREDIT", popup));
-        debitBtn.setOnAction(e -> finalizeOrder("DEBIT", popup));
+        Button cashBtn = createPaymentBtn("CASH", popup);
+        Button creditBtn = createPaymentBtn("CREDIT", popup);
+        Button debitBtn = createPaymentBtn("DEBIT", popup);
 
         Button cancelBtn = new Button("CANCEL");
         cancelBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: gray; -fx-font-size: 10;");
@@ -105,29 +99,22 @@ public class CashierView {
         popup.show();
     }
 
-    private Button createPaymentBtn(String text) {
+    private Button createPaymentBtn(String text, Stage popup) {
         Button b = new Button(text);
-        b.setPrefWidth(200);
-        b.setPrefHeight(50);
+        b.setPrefWidth(200); b.setPrefHeight(50);
         b.setStyle(BORDER + "-fx-background-color: white; -fx-font-weight: bold;");
-        
-        b.setOnMouseEntered(e -> b.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-background-radius: 0;"));
-        b.setOnMouseExited(e -> b.setStyle(BORDER + "-fx-background-color: white; -fx-text-fill: black;"));
-        
+        b.setOnAction(e -> finalizeOrder(text, popup));
         return b;
     }
 
     private void finalizeOrder(String method, Stage popup) {
         BackendController.handlePlaceOrder("Guest Customer", cartItems);
-        System.out.println("[INFO] Payment successful via: " + method);
-
         cartItems.clear();
         updateCartUI();
         popup.close(); 
     }
 
-    //make product card with add button
-    private VBox createProductCard(int menuID, String name, double cost, String ice, String sugar, String topping) {
+    private VBox createProductCard(int id, String name, double price) {
         VBox card = new VBox();
         card.setStyle(BORDER);
         StackPane img = new StackPane(new Line(0,0,200,150), new Line(200,0,0,150));
@@ -135,9 +122,9 @@ public class CashierView {
         
         Button add = new Button("Add");
         add.setStyle(BORDER);
-        add.setOnAction(e -> { cartItems.add(new CartItem(menuID, name, cost, ice, sugar, topping)); updateCartUI(); });
+        add.setOnAction(e -> showCustomizationDialog(id, name, price));
 
-        HBox footer = new HBox(new Label("$" + cost), new Region(), add);
+        HBox footer = new HBox(new Label("$" + price), new Region(), add);
         HBox.setHgrow(footer.getChildren().get(1), Priority.ALWAYS);
         footer.setPadding(new Insets(5));
         footer.setStyle("-fx-border-color: black transparent transparent transparent;");
@@ -146,11 +133,43 @@ public class CashierView {
         return card;
     }
 
+    private void showCustomizationDialog(int id, String drinkName, double price) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Customize " + drinkName);
+
+        VBox layout = new VBox(15);
+        layout.setPadding(new Insets(20));
+        layout.setStyle("-fx-background-color: white; " + BORDER);
+
+        ComboBox<String> iceBox = new ComboBox<>(FXCollections.observableArrayList("Regular", "Less Ice", "No Ice"));
+        iceBox.setValue("Regular"); iceBox.setMaxWidth(Double.MAX_VALUE);
+
+        ComboBox<String> sugarBox = new ComboBox<>(FXCollections.observableArrayList("100%", "75%", "50%", "0%"));
+        sugarBox.setValue("100%"); sugarBox.setMaxWidth(Double.MAX_VALUE);
+
+        ComboBox<String> toppingBox = new ComboBox<>(FXCollections.observableArrayList("None", "Pearls", "Jelly"));
+        toppingBox.setValue("None"); toppingBox.setMaxWidth(Double.MAX_VALUE);
+
+        Button confirmBtn = new Button("ADD TO CART");
+        confirmBtn.setMaxWidth(Double.MAX_VALUE);
+        confirmBtn.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-background-radius: 0;");
+        
+        confirmBtn.setOnAction(e -> {
+            cartItems.add(new CartItem(id, drinkName, price, iceBox.getValue(), sugarBox.getValue(), toppingBox.getValue()));
+            updateCartUI();
+            dialog.close();
+        });
+
+        layout.getChildren().addAll(new Label("ICE"), iceBox, new Label("SUGAR"), sugarBox, new Label("TOPPING"), toppingBox, confirmBtn);
+        dialog.setScene(new Scene(layout, 300, 400));
+        dialog.show();
+    }
+
     private void updateCartUI() {
         cartItemsContainer.getChildren().clear();
-        boolean empty = cartItems.isEmpty();
-        emptyCartPlaceholder.setVisible(empty);
-        emptyCartPlaceholder.setManaged(empty);
+        emptyCartPlaceholder.setVisible(cartItems.isEmpty());
+        emptyCartPlaceholder.setManaged(cartItems.isEmpty());
 
         for (CartItem item : cartItems) {
             HBox row = new HBox(new Label(item.getName()), new Region(), new Label("$" + String.format("%.2f", item.getCost())));

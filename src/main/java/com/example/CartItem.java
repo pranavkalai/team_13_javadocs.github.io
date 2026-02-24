@@ -4,43 +4,22 @@ public class CartItem {
     private int menuID;
     private String name;
     private double cost;
-    private String iceLevel;
-    private String sugarLevel;
+    private String ice;
+    private String sugar;
     private String topping;
 
-    public CartItem(int menuID, String name, double cost, String iceLevel, String sugarLevel, String topping) {
+    public CartItem(int menuID, String name, double cost, String ice, String sugar, String topping) {
         this.menuID = menuID;
         this.name = name;
         this.cost = cost;
-        this.iceLevel = iceLevel;
-        this.sugarLevel = sugarLevel;
+        this.ice = ice;
+        this.sugar = sugar;
         this.topping = topping;
     }
-
-
-    public double getCost()
-    {
-        return cost;
-    }
-
-    public int getMenuID() {
-        return menuID;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getIce() {
-        return iceLevel;
-    }
-
-    public String getSugar() {
-        return sugarLevel;
-    }
-
-    public String getTopping() {
-        return topping;
-    }
-
+    public int getMenuID() { return menuID; }
+    public String getName() { return name; }
+    public double getCost() { return cost; }
+    public String getIce() { return ice; }
+    public String getSugar() { return sugar; }
+    public String getTopping() { return topping; }
 }
