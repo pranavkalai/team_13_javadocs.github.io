@@ -4,7 +4,11 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.layout.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class Main extends Application {
@@ -16,15 +20,17 @@ public class Main extends Application {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: white;");
 
+        // Sidebar setup
         VBox sidebar = new VBox();
         sidebar.setPrefWidth(250);
+        sidebar.setMinWidth(250); // Keep sidebar width constant when maximized
         sidebar.setStyle("-fx-border-color: transparent black transparent transparent;");
 
-        Label logo = new Label("BOBA SHOP"); // [cite: 5]
+        Label logo = new Label("BOBA SHOP");
         logo.setStyle("-fx-font-weight: bold; -fx-font-size: 20; -fx-padding: 20;");
 
-        Button cashierBtn = createSideBtn("Cashier"); // [cite: 6]
-        Button managerBtn = createSideBtn("Manager"); // [cite: 7]
+        Button cashierBtn = createSideBtn("Cashier");
+        Button managerBtn = createSideBtn("Manager");
 
         cashierBtn.setOnAction(e -> {
             setActive(cashierBtn, managerBtn);
@@ -37,10 +43,21 @@ public class Main extends Application {
 
         sidebar.getChildren().addAll(logo, cashierBtn, managerBtn);
         root.setLeft(sidebar);
+        
+        // Ensure contentArea expands to fill remaining space
+        HBox.setHgrow(contentArea, Priority.ALWAYS);
         root.setCenter(contentArea);
 
         cashierBtn.fire();
-        stage.setScene(new Scene(root, 1200, 800));
+        
+        Scene scene = new Scene(root, 1200, 800);
+        stage.setScene(scene);
+
+        // --- WINDOW CONTROLS ---
+        stage.setResizable(true); // Explicitly allow resizing
+        stage.setMaximized(true); // Start the application maximized
+        
+        stage.setTitle("BOBA SHOP POS");
         stage.show();
     }
 
