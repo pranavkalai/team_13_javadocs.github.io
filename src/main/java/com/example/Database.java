@@ -1,5 +1,5 @@
 package com.example;
-
+import io.github.cdimascio.dotenv.Dotenv;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -7,17 +7,84 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 import javafx.collections.ObservableList;
 
 public class Database {
+    private static final Dotenv dotenv = Dotenv.load();
     private static final String URL = "jdbc:postgresql://csce-315-db.engr.tamu.edu/team_13_db";
-    private static final String USER = System.getenv("DB_USER");
-    private static final String PASSWORD = System.getenv("DB_PASSWORD");
+    private static final String USER = dotenv.get("DB_USER");
+    private static final String PASSWORD = dotenv.get("DB_PASSWORD");
 
     public static Connection getConnection() throws SQLException {
+        if (USER == null || PASSWORD == null) {
+            throw new SQLException("Database credentials not set in environment variables (DB_USER, DB_PASSWORD)");
+        }
         return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+
+    public static List<Product> getAllProducts() {
+        List<Product> products = new ArrayList<>();
+        String sql = "SELECT * FROM menu ORDER BY name";
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                products.add(new Product(
+                    rs.getInt("menuID"),
+                    rs.getString("name"),
+                    rs.getDouble("cost"),
+                    rs.getInt("salesNum")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return products;
+    }
+
+    public static List<InventoryItem> getAllInventory() {
+        List<InventoryItem> items = new ArrayList<>();
+        String sql = "SELECT * FROM inventory ORDER BY name";
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                items.add(new InventoryItem(
+                    rs.getInt("inventoryID"),
+                    rs.getString("name"),
+                    rs.getDouble("cost"),
+                    rs.getInt("inventoryNum"),
+                    rs.getInt("useAverage")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return items;
+    }
+
+    public static List<Employee> getAllEmployees() {
+        List<Employee> employees = new ArrayList<>();
+        String sql = "SELECT * FROM employees ORDER BY name";
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                employees.add(new Employee(
+                    rs.getInt("employeeID"),
+                    rs.getString("name"),
+                    rs.getDouble("pay"),
+                    rs.getString("job"),
+                    rs.getInt("orderNum")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return employees;
     }
 
     
