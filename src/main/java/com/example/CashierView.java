@@ -131,11 +131,21 @@ public class CashierView {
     }
 
     private void finalizeOrder(String method, Stage popup, String customerName) {
-        // Now passing the actual name from the UI
-        BackendController.handlePlaceOrder(customerName, cartItems);
-        cartItems.clear();
-        updateCartUI();
-        popup.close(); 
+        // Capture success status from backend
+        boolean success = BackendController.handlePlaceOrder(customerName, cartItems);
+        
+        if (success) {
+            cartItems.clear();
+            updateCartUI();
+            popup.close(); 
+        } else {
+            // Show error if order failed (e.g., due to stock)
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+            alert.setTitle("Order Error");
+            alert.setHeaderText("Order Failed");
+            alert.setContentText("Insufficient inventory to fulfill this order!");
+            alert.showAndWait();
+        }
     }
 
     private VBox createProductCard(Product p) {

@@ -11,7 +11,9 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Database {
     private static final Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
@@ -43,6 +45,19 @@ public class Database {
 
         public String getMenuItem() { return menuItem; }
         public int getTotalQuantity() { return totalQuantity; }
+    }
+
+    public static class StockLevelRow {
+        private final String name;
+        private final int stock;
+
+        public StockLevelRow(String name, int stock) {
+            this.name = name;
+            this.stock = stock;
+        }
+
+        public String getName() { return name; }
+        public int getStock() { return stock; }
     }
 
     public static Connection getConnection() throws SQLException {
@@ -134,6 +149,22 @@ public class Database {
             e.printStackTrace();
         }
         return items;
+    }
+
+    public static boolean updateInventoryItem(int id, String name, double cost, int qty, int avg) {
+        String sql = "UPDATE inventory SET name = ?, cost = ?, inventoryNum = ?, useAverage = ? WHERE inventoryID = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.setDouble(2, cost);
+            ps.setInt(3, qty);
+            ps.setInt(4, avg);
+            ps.setInt(5, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public static List<Employee> getAllEmployees() {
@@ -256,16 +287,82 @@ public class Database {
         return rows;
     }
 
+    public static List<StockLevelRow> getLowestStock(int limit) {
+        List<StockLevelRow> rows = new ArrayList<>();
+        String sql = "SELECT name, inventoryNum FROM inventory ORDER BY inventoryNum ASC LIMIT ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new StockLevelRow(rs.getString("name"), rs.getInt("inventoryNum")));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return rows;
+    }
+
+    /**
+     * Checks if the order can be fulfilled based on current inventory.
+     */
+    public static boolean canFulfillOrder(List<CartItem> cartItems) {
+        Map<Integer, Integer> requiredIngredients = new HashMap<>();
+        String recipeSql = "SELECT inventoryID, itemQuantity FROM menu_items WHERE menuID = ?";
+
+        try (Connection conn = getConnection()) {
+            for (CartItem item : cartItems) {
+                try (PreparedStatement ps = conn.prepareStatement(recipeSql)) {
+                    ps.setInt(1, item.getMenuID());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            int invID = rs.getInt("inventoryID");
+                            int qty = rs.getInt("itemQuantity");
+                            requiredIngredients.put(invID, requiredIngredients.getOrDefault(invID, 0) + qty);
+                        }
+                    }
+                }
+            }
+
+            // Check against inventory
+            String invSql = "SELECT inventoryNum FROM inventory WHERE inventoryID = ?";
+            for (Map.Entry<Integer, Integer> entry : requiredIngredients.entrySet()) {
+                try (PreparedStatement ps = conn.prepareStatement(invSql)) {
+                    ps.setInt(1, entry.getKey());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            int stock = rs.getInt("inventoryNum");
+                            if (stock < entry.getValue()) {
+                                return false; // Not enough stock
+                            }
+                        } else {
+                            return false; // Ingredient missing from inventory table
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
     public static void submitOrder(String customer, int empID, List<CartItem> cartItems) {
         String ordSql = "INSERT INTO orders (orderID, customerName, costTotal, employeeID, orderDateTime) VALUES (?, ?, ?, ?, ?)";
         String itemSql = "INSERT INTO order_items (ID, menuID, orderID, quantity, iceLevel, sugarLevel, topping, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String updateEmpSql = "UPDATE employees SET orderNum = orderNum + 1 WHERE employeeID = ?";
+        String updateMenuSql = "UPDATE menu SET salesNum = salesNum + 1 WHERE menuID = ?";
+        String recipeSql = "SELECT inventoryID, itemQuantity FROM menu_items WHERE menuID = ?";
+        String deductInvSql = "UPDATE inventory SET inventoryNum = inventoryNum - ? WHERE inventoryID = ?";
 
         try (Connection conn = getConnection()) {
             conn.setAutoCommit(false);
             int oID = getNextID(conn, "orders", "orderID");
             double total = cartItems.stream().mapToDouble(CartItem::getCost).sum();
 
-            // insert into orders table
+            // Insert into orders table
             try (PreparedStatement ps = conn.prepareStatement(ordSql)) {
                 ps.setInt(1, oID);
                 ps.setString(2, customer);
@@ -275,9 +372,16 @@ public class Database {
                 ps.executeUpdate();
             }
 
+            // Update employee order count
+            try (PreparedStatement ps = conn.prepareStatement(updateEmpSql)) {
+                ps.setInt(1, empID);
+                ps.executeUpdate();
+            }
+
             for (CartItem item : cartItems) {
                 int itemID = getNextID(conn, "order_items", "ID");
 
+                // Insert into order_items table
                 try (PreparedStatement ps = conn.prepareStatement(itemSql)) {
                     ps.setInt(1, itemID);
                     ps.setInt(2, item.getMenuID());
@@ -289,13 +393,70 @@ public class Database {
                     ps.setDouble(8, item.getCost());
                     ps.executeUpdate();
                 }
+
+                // Update menu sales count
+                try (PreparedStatement ps = conn.prepareStatement(updateMenuSql)) {
+                    ps.setInt(1, item.getMenuID());
+                    ps.executeUpdate();
+                }
+
+                // Inventory deduction based on recipe
+                try (PreparedStatement psRecipe = conn.prepareStatement(recipeSql)) {
+                    psRecipe.setInt(1, item.getMenuID());
+                    try (ResultSet rs = psRecipe.executeQuery()) {
+                        while (rs.next()) {
+                            int invID = rs.getInt("inventoryID");
+                            int qtyToDeduct = rs.getInt("itemQuantity");
+                            try (PreparedStatement psDeduct = conn.prepareStatement(deductInvSql)) {
+                                psDeduct.setInt(1, qtyToDeduct);
+                                psDeduct.setInt(2, invID);
+                                psDeduct.executeUpdate();
+                            }
+                        }
+                    }
+                }
             }
 
             conn.commit();
-            System.out.println("[LOG] Order #" + oID + " finalized.");
+            System.out.println("[LOG] Order #" + oID + " finalized and inventory updated.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void restockItem(String itemName, int quantity) {
+        String sql = "UPDATE inventory SET inventoryNum = inventoryNum + ? WHERE name = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setString(2, itemName);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static List<InventoryItem> getLowStockItems(int threshold) {
+        List<InventoryItem> items = new ArrayList<>();
+        String sql = "SELECT * FROM inventory WHERE inventoryNum < ? ORDER BY inventoryNum ASC";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, threshold);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    items.add(new InventoryItem(
+                            rs.getInt("inventoryID"),
+                            rs.getString("name"),
+                            rs.getDouble("cost"),
+                            rs.getInt("inventoryNum"),
+                            rs.getInt("useAverage")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return items;
     }
 
     private static int getNextID(Connection conn, String table, String col) throws SQLException {

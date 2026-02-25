@@ -23,7 +23,7 @@ public class Main extends Application {
         // Sidebar setup
         VBox sidebar = new VBox();
         sidebar.setPrefWidth(250);
-        sidebar.setMinWidth(250); // Keep sidebar width constant when maximized
+        sidebar.setMinWidth(250);
         sidebar.setStyle("-fx-border-color: transparent black transparent transparent;");
 
         Label logo = new Label("BOBA SHOP");
@@ -42,11 +42,12 @@ public class Main extends Application {
         });
 
         sidebar.getChildren().addAll(logo, cashierBtn, managerBtn);
-        root.setLeft(sidebar);
-        
-        // Ensure contentArea expands to fill remaining space
+
+        // Main Body Container to fix resizing issues
+        HBox body = new HBox(sidebar, contentArea);
         HBox.setHgrow(contentArea, Priority.ALWAYS);
-        root.setCenter(contentArea);
+        
+        root.setCenter(body);
 
         cashierBtn.fire();
         
@@ -54,8 +55,8 @@ public class Main extends Application {
         stage.setScene(scene);
 
         // --- WINDOW CONTROLS ---
-        stage.setResizable(true); // Explicitly allow resizing
-        stage.setMaximized(true); // Start the application maximized
+        stage.setResizable(true); 
+        stage.setMaximized(true); 
         
         stage.setTitle("BOBA SHOP POS");
         stage.show();
