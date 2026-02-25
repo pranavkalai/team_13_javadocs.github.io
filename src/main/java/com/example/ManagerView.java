@@ -152,16 +152,22 @@ public class ManagerView {
         tableHead.setStyle("-fx-background-color: #eee; " + BORDER);
         tableHead.getChildren().addAll(
             createHeaderCell("NAME", 150), createHeaderCell("ROLE", 100),
-            createHeaderCell("PAY RATE", 100), createHeaderCell("ORDERS", 100)
+            createHeaderCell("PAY RATE", 100), createHeaderCell("ORDERS", 100),
+            createHeaderCell("ACTIONS", 100)
         );
 
-        List<Employee> employees = Database.getAllEmployees();
-        for (Employee emp : employees) {
-            addEmployeeRow(emp.getName(), emp.getJob(), String.valueOf(emp.getPay()), String.valueOf(emp.getOrderNum()));
-        }
+        refreshTeamTable();
 
         teamLayout.getChildren().addAll(header, tableHead, tableRowsContainer);
         return teamLayout;
+    }
+
+    private void refreshTeamTable() {
+        tableRowsContainer.getChildren().clear();
+        List<Employee> employees = Database.getAllEmployees();
+        for (Employee emp : employees) {
+            addEmployeeRow(emp);
+        }
     }
 
     private void showAddEmployeeDialog() {
@@ -176,36 +182,83 @@ public class ManagerView {
         TextField n = new TextField(); n.setPromptText("Name");
         TextField r = new TextField(); r.setPromptText("Role");
         TextField p = new TextField(); p.setPromptText("Pay");
-        TextField h = new TextField(); h.setPromptText("Hours");
-        n.setStyle(BORDER); r.setStyle(BORDER); p.setStyle(BORDER); h.setStyle(BORDER);
+        n.setStyle(BORDER); r.setStyle(BORDER); p.setStyle(BORDER);
 
         Button confirm = new Button("Confirm");
         confirm.setStyle(BORDER);
         confirm.setMaxWidth(Double.MAX_VALUE);
         
         confirm.setOnAction(e -> {
-            // Validation and processing handled by BackendController
-            if (BackendController.validateEmployeeInput(n.getText(), r.getText(), p.getText(), h.getText())) {
-                addEmployeeRow(n.getText(), r.getText(), p.getText(), h.getText());
+            if (BackendController.validateEmployeeInput(n.getText(), r.getText(), p.getText(), "0")) {
+                BackendController.handleAddEmployee(n.getText(), r.getText(), p.getText());
+                refreshTeamTable();
                 dialog.close();
             } else {
-                // Temporary error feedback
                 confirm.setText("Invalid Input!");
                 confirm.setStyle(BORDER + "-fx-text-fill: red;");
             }
         });
 
-        form.getChildren().addAll(new Label("New Employee Details"), n, r, p, h, confirm);
+        form.getChildren().addAll(new Label("New Employee Details"), n, r, p, confirm);
+        dialog.setScene(new Scene(form, 300, 320));
+        dialog.show();
+    }
+
+    private void showEditEmployeeDialog(Employee emp) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Edit Employee");
+
+        VBox form = new VBox(10);
+        form.setPadding(new Insets(20));
+        form.setStyle(BORDER + "-fx-background-color: white;");
+
+        TextField n = new TextField(emp.getName());
+        TextField r = new TextField(emp.getJob());
+        TextField p = new TextField(String.valueOf(emp.getPay()));
+        n.setStyle(BORDER); r.setStyle(BORDER); p.setStyle(BORDER);
+
+        Button confirm = new Button("Save Changes");
+        confirm.setStyle(BORDER);
+        confirm.setMaxWidth(Double.MAX_VALUE);
+        
+        confirm.setOnAction(e -> {
+            if (BackendController.validateEmployeeInput(n.getText(), r.getText(), p.getText(), "0")) {
+                BackendController.handleUpdateEmployee(emp.getEmployeeID(), n.getText(), r.getText(), p.getText());
+                refreshTeamTable();
+                dialog.close();
+            } else {
+                confirm.setText("Invalid Input!");
+                confirm.setStyle(BORDER + "-fx-text-fill: red;");
+            }
+        });
+
+        Button removeBtn = new Button("REMOVE EMPLOYEE");
+        removeBtn.setStyle(BORDER + "-fx-background-color: #ff4444; -fx-text-fill: white; -fx-font-weight: bold;");
+        removeBtn.setMaxWidth(Double.MAX_VALUE);
+        removeBtn.setOnAction(e -> {
+            BackendController.handleRemoveEmployee(emp.getEmployeeID());
+            refreshTeamTable();
+            dialog.close();
+        });
+
+        form.getChildren().addAll(new Label("Edit Employee Details"), n, r, p, confirm, new Region(), removeBtn);
         dialog.setScene(new Scene(form, 300, 380));
         dialog.show();
     }
 
-    private void addEmployeeRow(String name, String role, String pay, String orders) {
+    private void addEmployeeRow(Employee emp) {
         HBox row = new HBox();
         row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5;");
+        
+        Button editBtn = new Button("Edit");
+        editBtn.setStyle(BORDER + "-fx-font-size: 10;");
+        editBtn.setOnAction(e -> showEditEmployeeDialog(emp));
+
         row.getChildren().addAll(
-            createDataCell(name, 150), createDataCell(role, 100),
-            createDataCell("$" + pay + "/hr", 100), createDataCell(orders, 100)
+            createDataCell(emp.getName(), 150), createDataCell(emp.getJob(), 100),
+            createDataCell("$" + emp.getPay() + "/hr", 100), createDataCell(String.valueOf(emp.getOrderNum()), 100),
+            new StackPane(editBtn)
         );
         tableRowsContainer.getChildren().add(row);
     }

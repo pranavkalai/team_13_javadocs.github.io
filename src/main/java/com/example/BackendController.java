@@ -63,6 +63,32 @@ public class BackendController {
         }
     }
 
+    public static void handleAddEmployee(String name, String role, String pay) {
+        try {
+            double payRate = Double.parseDouble(pay);
+            Database.addEmployee(name, role, payRate);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void handleUpdateEmployee(int id, String name, String role, String pay) {
+        try {
+            double payRate = Double.parseDouble(pay);
+            Database.updateEmployee(id, name, role, payRate);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void handleRemoveEmployee(int id) {
+        try {
+            Database.deleteEmployee(id);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     // --- MANAGER LOGIC: STOCK ---
 
     /**

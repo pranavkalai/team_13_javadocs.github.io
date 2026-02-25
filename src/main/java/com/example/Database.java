@@ -87,7 +87,40 @@ public class Database {
         return employees;
     }
 
-    
+    public static void addEmployee(String name, String job, double pay) {
+        String sql = "INSERT INTO employees (employeeID, name, pay, job, orderNum) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = getConnection()) {
+            int empID = getNextID(conn, "employees", "employeeID");
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, empID);
+                ps.setString(2, name);
+                ps.setDouble(3, pay);
+                ps.setString(4, job);
+                ps.setInt(5, 0); // initial order count
+                ps.executeUpdate();
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    public static void updateEmployee(int empID, String name, String job, double pay) {
+        String sql = "UPDATE employees SET name = ?, pay = ?, job = ? WHERE employeeID = ?";
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.setDouble(2, pay);
+            ps.setString(3, job);
+            ps.setInt(4, empID);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    public static void deleteEmployee(int empID) {
+        String sql = "DELETE FROM employees WHERE employeeID = ?";
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, empID);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
     public static void submitOrder(String customer, int empID, List<CartItem> cartItems) {
         String ordSql = "INSERT INTO orders (orderID, customerName, costTotal, employeeID, orderDateTime) VALUES (?, ?, ?, ?, ?)";
         String itemSql = "INSERT INTO order_items (ID, menuID, orderID, quantity, iceLevel, sugarLevel, topping, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";

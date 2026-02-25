@@ -1,5 +1,7 @@
 package com.example;
 
+import java.util.List;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -9,6 +11,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -18,8 +21,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Line;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-
-import java.util.List;
 
 public class CashierView {
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
@@ -86,34 +87,52 @@ public class CashierView {
         layout.setAlignment(Pos.CENTER);
         layout.setStyle("-fx-background-color: white; " + BORDER);
 
+        // --- ADDED: Customer Name Input ---
+        Label nameLabel = new Label("CUSTOMER NAME:");
+        nameLabel.setStyle("-fx-font-weight: bold;");
+        TextField nameInput = new TextField();
+        nameInput.setPromptText("Enter name...");
+        nameInput.setMaxWidth(200);
+        // ----------------------------------
+
         Label title = new Label("SELECT PAYMENT METHOD");
         title.setStyle("-fx-font-weight: bold; -fx-font-size: 14;");
 
-        Button cashBtn = createPaymentBtn("CASH", popup);
-        Button creditBtn = createPaymentBtn("CREDIT", popup);
-        Button debitBtn = createPaymentBtn("DEBIT", popup);
+        // Pass the nameInput reference to the payment buttons
+        Button cashBtn = createPaymentBtn("CASH", popup, nameInput);
+        Button creditBtn = createPaymentBtn("CREDIT", popup, nameInput);
+        Button debitBtn = createPaymentBtn("DEBIT", popup, nameInput);
 
         Button cancelBtn = new Button("CANCEL");
         cancelBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: gray; -fx-font-size: 10;");
         cancelBtn.setOnAction(e -> popup.close());
 
-        layout.getChildren().addAll(title, cashBtn, creditBtn, debitBtn, cancelBtn);
+        layout.getChildren().addAll(nameLabel, nameInput, title, cashBtn, creditBtn, debitBtn, cancelBtn);
 
         Scene scene = new Scene(layout, 350, 450);
         popup.setScene(scene);
         popup.show();
     }
 
-    private Button createPaymentBtn(String text, Stage popup) {
+    private Button createPaymentBtn(String text, Stage popup, TextField nameInput) {
         Button b = new Button(text);
         b.setPrefWidth(200); b.setPrefHeight(50);
         b.setStyle(BORDER + "-fx-background-color: white; -fx-font-weight: bold;");
-        b.setOnAction(e -> finalizeOrder(text, popup));
+        
+        b.setOnAction(e -> {
+            // Fallback to "Guest" if the field is empty
+            String customerName = nameInput.getText().trim();
+            if (customerName.isEmpty()) {
+                customerName = "Guest";
+            }
+            finalizeOrder(text, popup, customerName);
+        });
         return b;
     }
 
-    private void finalizeOrder(String method, Stage popup) {
-        BackendController.handlePlaceOrder("Guest Customer", cartItems);
+    private void finalizeOrder(String method, Stage popup, String customerName) {
+        // Now passing the actual name from the UI
+        BackendController.handlePlaceOrder(customerName, cartItems);
         cartItems.clear();
         updateCartUI();
         popup.close(); 
