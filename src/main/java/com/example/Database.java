@@ -10,8 +10,6 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import javafx.collections.ObservableList;
-
 public class Database {
     private static final Dotenv dotenv = Dotenv.load();
     private static final String URL = "jdbc:postgresql://csce-315-db.engr.tamu.edu/team_13_db";
@@ -43,6 +41,49 @@ public class Database {
             e.printStackTrace();
         }
         return products;
+    }
+
+    public static boolean addMenuItem(String name, double cost) {
+        String sql = "INSERT INTO menu (menuID, name, cost, salesNum) VALUES (?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            int menuID = getNextID(conn, "menu", "menuID");
+            ps.setInt(1, menuID);
+            ps.setString(2, name);
+            ps.setDouble(3, cost);
+            ps.setInt(4, 0);
+            ps.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean updateMenuItem(int menuID, String name, double cost) {
+        String sql = "UPDATE menu SET name = ?, cost = ? WHERE menuID = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.setDouble(2, cost);
+            ps.setInt(3, menuID);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean deleteMenuItem(int menuID) {
+        String sql = "DELETE FROM menu WHERE menuID = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, menuID);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public static List<InventoryItem> getAllInventory() {

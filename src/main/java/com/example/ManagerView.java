@@ -3,8 +3,11 @@ package com.example;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -35,38 +38,244 @@ public class ManagerView {
 
         // Tab Navigation
         HBox tabs = new HBox();
+        Button menuBtn = createTab("Menu");
         Button trendsBtn = createTab("Trends");
         Button stockBtn = createTab("Stock");
         Button teamBtn = createTab("Team");
 
+        menuBtn.setOnAction(e -> {
+            updateTabStyle(menuBtn, trendsBtn, stockBtn, teamBtn);
+            displayArea.getChildren().setAll(createMenuTab());
+        });
+
         trendsBtn.setOnAction(e -> {
-            updateTabStyle(trendsBtn, stockBtn, teamBtn);
+            updateTabStyle(trendsBtn, menuBtn, stockBtn, teamBtn);
             displayArea.getChildren().setAll(createTrendsTab());
         });
         
         stockBtn.setOnAction(e -> {
-            updateTabStyle(stockBtn, trendsBtn, teamBtn);
+            updateTabStyle(stockBtn, menuBtn, trendsBtn, teamBtn);
             displayArea.getChildren().setAll(createStockTab());
         });
         
         teamBtn.setOnAction(e -> {
-            updateTabStyle(teamBtn, trendsBtn, stockBtn);
+            updateTabStyle(teamBtn, menuBtn, trendsBtn, stockBtn);
             displayArea.getChildren().setAll(createTeamTab());
         });
 
-        tabs.getChildren().addAll(trendsBtn, stockBtn, teamBtn);
+        tabs.getChildren().addAll(menuBtn, trendsBtn, stockBtn, teamBtn);
         
-        // Default to Trends
-        trendsBtn.fire();
+        // Default to Menu
+        menuBtn.fire();
 
         layout.getChildren().addAll(title, tabs, displayArea);
         return layout;
     }
 
-    private void updateTabStyle(Button active, Button b1, Button b2) {
+    private void updateTabStyle(Button active, Button... others) {
         active.setStyle(BORDER + "-fx-background-color: black; -fx-text-fill: white;");
-        b1.setStyle(BORDER + "-fx-background-color: white; -fx-text-fill: black;");
-        b2.setStyle(BORDER + "-fx-background-color: white; -fx-text-fill: black;");
+        for (Button button : others) {
+            button.setStyle(BORDER + "-fx-background-color: white; -fx-text-fill: black;");
+        }
+    }
+
+    // --- MENU TAB ---
+    private VBox createMenuTab() {
+        VBox menuLayout = new VBox(10);
+
+        HBox header = new HBox();
+        Label menuTitle = new Label("Menu Management");
+        menuTitle.setStyle("-fx-font-weight: bold;");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button addBtn = new Button("Add Menu Item");
+        addBtn.setStyle(BORDER);
+        addBtn.setOnAction(e -> showAddMenuItemDialog());
+        header.getChildren().addAll(menuTitle, spacer, addBtn);
+
+        HBox tableHead = new HBox();
+        tableHead.setStyle("-fx-background-color: #eee; " + BORDER);
+        tableHead.getChildren().addAll(
+            createHeaderCell("NAME", 220),
+            createHeaderCell("PRICE", 120),
+            createHeaderCell("ACTIONS", 200)
+        );
+
+        VBox rowsContainer = new VBox();
+        List<Product> products = Database.getAllProducts();
+        for (Product product : products) {
+            rowsContainer.getChildren().add(createMenuRow(product));
+        }
+
+        ScrollPane scrollPane = new ScrollPane(rowsContainer);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPannable(true);
+        scrollPane.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
+        scrollPane.setPrefHeight(520);
+
+        menuLayout.getChildren().addAll(header, tableHead, scrollPane);
+        return menuLayout;
+    }
+
+    private HBox createMenuRow(Product product) {
+        HBox row = new HBox();
+        row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5;");
+
+        Label name = createDataCell(product.getName(), 220);
+        Label price = createDataCell("$" + String.format("%.2f", product.getCost()), 120);
+
+        Button editBtn = new Button("Edit");
+        editBtn.setStyle(BORDER + "-fx-background-color: white;");
+        editBtn.setPrefWidth(180);
+        editBtn.setOnAction(e -> showEditMenuItemDialog(product));
+
+        row.getChildren().addAll(name, price, editBtn);
+        return row;
+    }
+
+    private void showAddMenuItemDialog() {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Add Menu Item");
+
+        VBox form = new VBox(10);
+        form.setPadding(new Insets(20));
+        form.setStyle(BORDER + "-fx-background-color: white;");
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("Item Name");
+        TextField priceField = new TextField();
+        priceField.setPromptText("Price");
+        nameField.setStyle(BORDER);
+        priceField.setStyle(BORDER);
+
+        Label feedback = new Label();
+        feedback.setStyle("-fx-text-fill: red;");
+
+        Button confirm = new Button("Confirm");
+        confirm.setStyle(BORDER);
+        confirm.setMaxWidth(Double.MAX_VALUE);
+        confirm.setOnAction(e -> {
+            String name = nameField.getText().trim();
+            String priceText = priceField.getText().trim();
+            if (name.isEmpty() || priceText.isEmpty()) {
+                feedback.setText("All fields are required.");
+                return;
+            }
+
+            try {
+                double price = Double.parseDouble(priceText);
+                if (price < 0) {
+                    feedback.setText("Price must be non-negative.");
+                    return;
+                }
+
+                System.out.println("[FRONTEND] Manager requested add menu item: name=\"" + name + "\", price=$" + String.format("%.2f", price));
+                boolean inserted = Database.addMenuItem(name, price);
+                if (inserted) {
+                    System.out.println("[BACKEND][LOG] Menu item added successfully.");
+                    displayArea.getChildren().setAll(createMenuTab());
+                    dialog.close();
+                } else {
+                    feedback.setText("Failed to add menu item.");
+                    System.out.println("[BACKEND][LOG] Failed to add menu item.");
+                }
+            } catch (NumberFormatException ex) {
+                feedback.setText("Price must be a number.");
+            }
+        });
+
+        form.getChildren().addAll(new Label("New Menu Item"), nameField, priceField, confirm, feedback);
+        dialog.setScene(new Scene(form, 320, 280));
+        dialog.show();
+    }
+
+    private void showEditMenuItemDialog(Product product) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Update Menu Item");
+
+        VBox form = new VBox(10);
+        form.setPadding(new Insets(20));
+        form.setStyle(BORDER + "-fx-background-color: white;");
+
+        TextField nameField = new TextField(product.getName());
+        TextField priceField = new TextField(String.format("%.2f", product.getCost()));
+        nameField.setStyle(BORDER);
+        priceField.setStyle(BORDER);
+
+        Label feedback = new Label();
+        feedback.setStyle("-fx-text-fill: red;");
+
+        Button confirm = new Button("Update");
+        confirm.setStyle(BORDER);
+        confirm.setMaxWidth(Double.MAX_VALUE);
+        confirm.setOnAction(e -> {
+            String name = nameField.getText().trim();
+            String priceText = priceField.getText().trim();
+            if (name.isEmpty() || priceText.isEmpty()) {
+                feedback.setText("All fields are required.");
+                return;
+            }
+
+            try {
+                double price = Double.parseDouble(priceText);
+                if (price < 0) {
+                    feedback.setText("Price must be non-negative.");
+                    return;
+                }
+
+                System.out.println("[FRONTEND] Manager requested update for menuID=" + product.getMenuID()
+                        + " -> name=\"" + name + "\", price=" + String.format("%.2f", price));
+                boolean updated = Database.updateMenuItem(product.getMenuID(), name, price);
+                if (updated) {
+                    System.out.println("[BACKEND][LOG] Menu item updated for menuID=" + product.getMenuID() + ".");
+                    displayArea.getChildren().setAll(createMenuTab());
+                    dialog.close();
+                } else {
+                    feedback.setText("Failed to update menu item.");
+                    System.out.println("[BACKEND][LOG] Failed to update menu item for menuID=" + product.getMenuID() + ".");
+                }
+            } catch (NumberFormatException ex) {
+                feedback.setText("Price must be a number.");
+            }
+        });
+
+        Button deleteBtn = new Button("Delete Item");
+        deleteBtn.setStyle(BORDER + "-fx-background-color: white;");
+        deleteBtn.setMaxWidth(Double.MAX_VALUE);
+        deleteBtn.setOnAction(e -> {
+            System.out.println("[FRONTEND] Manager requested delete for menuID=" + product.getMenuID() + " (" + product.getName() + ").");
+            Alert confirmDelete = new Alert(
+                    Alert.AlertType.CONFIRMATION,
+                    "Delete \"" + product.getName() + "\" from the menu?",
+                    ButtonType.YES,
+                    ButtonType.NO
+            );
+            confirmDelete.setTitle("Confirm Delete");
+            confirmDelete.setHeaderText("This action cannot be undone.");
+            confirmDelete.initOwner(dialog);
+
+            ButtonType result = confirmDelete.showAndWait().orElse(ButtonType.NO);
+            if (result == ButtonType.YES) {
+                boolean deleted = Database.deleteMenuItem(product.getMenuID());
+                if (deleted) {
+                    System.out.println("[BACKEND][LOG] Menu item deleted for menuID=" + product.getMenuID() + ".");
+                    displayArea.getChildren().setAll(createMenuTab());
+                    dialog.close();
+                } else {
+                    feedback.setText("Failed to delete menu item.");
+                    System.out.println("[BACKEND][LOG] Failed to delete menu item for menuID=" + product.getMenuID() + ".");
+                }
+            } else {
+                System.out.println("[LOG] Delete canceled by manager for menuID=" + product.getMenuID() + ".");
+            }
+        });
+
+        form.getChildren().addAll(new Label("Edit Menu Item"), nameField, priceField, confirm, deleteBtn, feedback);
+        dialog.setScene(new Scene(form, 320, 320));
+        dialog.show();
     }
 
     // --- TRENDS TAB ---
