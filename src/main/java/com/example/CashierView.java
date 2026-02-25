@@ -29,6 +29,15 @@ public class CashierView {
     private Label cartLabel = new Label("Cart (0)");
     private Label totalLabel = new Label("Total: $0.00");
     private StackPane emptyCartPlaceholder = new StackPane(new Label("Cart Empty"));
+    private final int employeeID;
+
+    //constructor to be used with login
+    public CashierView() {
+        this.employeeID = 1; 
+    }
+    public CashierView(int employeeID) {
+        this.employeeID = employeeID;
+    }
 
     public HBox getView() {
         HBox layout = new HBox();
@@ -133,7 +142,7 @@ public class CashierView {
 
     private void finalizeOrder(String method, Stage popup, String customerName) {
         // Capture success status from backend
-        boolean success = BackendController.handlePlaceOrder(customerName, cartItems);
+        boolean success = BackendController.handlePlaceOrder(customerName, employeeID, cartItems);
         
         if (success) {
             cartItems.clear();

@@ -23,7 +23,7 @@ public class BackendController {
      * Logic for the "Place Order" button.
      * @return true if successful, false if inventory check failed or database error.
      */
-    public static boolean handlePlaceOrder(String customerName, List<CartItem> cartItems) {
+    public static boolean handlePlaceOrder(String customerName, int employeeID, List<CartItem> cartItems) {
         if (cartItems.isEmpty()) {
             System.out.println("[WARN] Attempted to place order with empty cart.");
             return false;
@@ -36,8 +36,8 @@ public class BackendController {
                 return false;
             }
 
-            // Hardcoded employeeID for now, will be replaced by login system.
-            int employeeID = 1;
+            // Hardcoded employeeID for now, will be replaced by login system. - changing it now
+            //int employeeID = 1;
             Database.submitOrder(customerName, employeeID, cartItems);
             
             System.out.println("[BACKEND] Order successfully saved.");
