@@ -5,6 +5,9 @@ from datetime import datetime, timedelta
 # CONFIGURATION
 NUM_WEEKS = 52
 START_DATE = datetime(2025, 1, 1)
+ICE_OPTIONS = ["No Ice", "Less Ice", "Regular Ice", "Extra Ice"]
+SUGAR_OPTIONS = ["0%", "25%", "50%", "75%", "100%"]
+TOPPING_OPTIONS = ["None", "Boba", "Pudding", "Grass Jelly", "Red Bean", "Aloe Vera"]
 TARGET_REVENUE = 1_000_000
 NUM_MENU_ITEMS = 20
 NUM_EMPLOYEES = 8
@@ -229,7 +232,9 @@ while current_date < end_date:
         order_total = 0
         for menu in selected_menu:
             quantity = random.randint(1, 2)
-            line_total = quantity * menu[2]
+            topping = random.choice(TOPPING_OPTIONS)
+            topping_cost = 0.50 if topping != "None" else 0.00
+            line_total = quantity * menu[2] + topping_cost
             order_total += line_total
 
             # UPDATE SALES TRACKER FOR THE MENU ITEM
@@ -240,7 +245,10 @@ while current_date < end_date:
                 menu[0],
                 order_id,
                 quantity,
-                menu[2]
+                random.choice(ICE_OPTIONS),
+                random.choice(SUGAR_OPTIONS),
+                topping,
+                menu[2]+topping_cost
             ])
 
         total_revenue += order_total

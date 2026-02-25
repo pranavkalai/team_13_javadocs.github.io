@@ -41,6 +41,9 @@ CREATE TABLE order_items (
     menuID INT,
     orderID INT,
     quantity INT,
+    iceLevel VARCHAR(20),
+    sugarLevel VARCHAR(20),
+    topping VARCHAR(50),
     cost DECIMAL(10,2)
 );
 
