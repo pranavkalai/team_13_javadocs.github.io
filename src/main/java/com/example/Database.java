@@ -167,6 +167,36 @@ public class Database {
         }
     }
 
+    public static boolean addInventoryItem(String name, double cost, int qty, int avg) {
+        String sql = "INSERT INTO inventory (inventoryID, name, cost, inventoryNum, useAverage) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            int inventoryID = getNextID(conn, "inventory", "inventoryID");
+            ps.setInt(1, inventoryID);
+            ps.setString(2, name);
+            ps.setDouble(3, cost);
+            ps.setInt(4, qty);
+            ps.setInt(5, avg);
+            ps.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean deleteInventoryItem(int inventoryID) {
+        String sql = "DELETE FROM inventory WHERE inventoryID = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, inventoryID);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public static List<Employee> getAllEmployees() {
         List<Employee> employees = new ArrayList<>();
         String sql = "SELECT * FROM employees ORDER BY name";

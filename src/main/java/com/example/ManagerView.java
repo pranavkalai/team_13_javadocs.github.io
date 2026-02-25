@@ -378,7 +378,22 @@ public class ManagerView {
     }
 
     // --- STOCK TAB ---
-    private ScrollPane createStockTab() {
+    private VBox createStockTab() {
+        VBox stockLayout = new VBox(10);
+        stockLayout.setFillWidth(true);
+        stockLayout.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        HBox header = new HBox();
+        Label stockTitle = new Label("Inventory Management");
+        stockTitle.setStyle("-fx-font-weight: bold;");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button addBtn = new Button("Add Inventory Item");
+        addBtn.setStyle(BORDER);
+        addBtn.setOnAction(e -> showAddInventoryDialog());
+        header.getChildren().addAll(stockTitle, spacer, addBtn);
+
         GridPane stockGrid = new GridPane();
         stockGrid.setHgap(15);
         stockGrid.setVgap(15);
@@ -399,8 +414,11 @@ public class ManagerView {
         ScrollPane scrollPane = new ScrollPane(stockGrid);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
-        scrollPane.setPrefHeight(600);
-        return scrollPane;
+        scrollPane.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
+        stockLayout.getChildren().addAll(header, scrollPane);
+        return stockLayout;
     }
 
     private VBox createStockCell(InventoryItem item) {
@@ -471,6 +489,95 @@ public class ManagerView {
                     dialog.close();
                 } else {
                     feedback.setText("Update failed.");
+                }
+            } catch (NumberFormatException ex) {
+                feedback.setText("Invalid number format.");
+            }
+        });
+
+        Button deleteBtn = new Button("Delete Item");
+        deleteBtn.setStyle(BORDER + "-fx-background-color: white;");
+        deleteBtn.setMaxWidth(Double.MAX_VALUE);
+        deleteBtn.setOnAction(e -> {
+            Alert confirmDelete = new Alert(
+                    Alert.AlertType.CONFIRMATION,
+                    "Delete \"" + item.getName() + "\" from inventory?",
+                    ButtonType.YES,
+                    ButtonType.NO
+            );
+            confirmDelete.setTitle("Confirm Delete");
+            confirmDelete.setHeaderText("This action cannot be undone.");
+            confirmDelete.initOwner(dialog);
+
+            ButtonType result = confirmDelete.showAndWait().orElse(ButtonType.NO);
+            if (result == ButtonType.YES) {
+                boolean ok = Database.deleteInventoryItem(item.getInventoryID());
+                if (ok) {
+                    displayArea.getChildren().setAll(createStockTab());
+                    dialog.close();
+                } else {
+                    feedback.setText("Delete failed.");
+                }
+            }
+        });
+
+        form.getChildren().addAll(
+                new Label("Item Name"), nameField,
+                new Label("Cost Per Unit"), priceField,
+                new Label("Current Quantity"), qtyField,
+                new Label("Usage Average"), avgField,
+                confirm, deleteBtn, feedback
+        );
+        dialog.setScene(new Scene(form, 300, 450));
+        dialog.show();
+    }
+
+    private void showAddInventoryDialog() {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Add Inventory Item");
+
+        VBox form = new VBox(10);
+        form.setPadding(new Insets(20));
+        form.setStyle(BORDER + "-fx-background-color: white;");
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("Item Name");
+        TextField priceField = new TextField();
+        priceField.setPromptText("Cost Per Unit");
+        TextField qtyField = new TextField();
+        qtyField.setPromptText("Current Quantity");
+        TextField avgField = new TextField();
+        avgField.setPromptText("Usage Average");
+
+        Label feedback = new Label();
+        feedback.setStyle("-fx-text-fill: red;");
+
+        Button confirm = new Button("Add Item");
+        confirm.setStyle(BORDER);
+        confirm.setMaxWidth(Double.MAX_VALUE);
+        confirm.setOnAction(e -> {
+            try {
+                String name = nameField.getText().trim();
+                double cost = Double.parseDouble(priceField.getText().trim());
+                int qty = Integer.parseInt(qtyField.getText().trim());
+                int avg = Integer.parseInt(avgField.getText().trim());
+
+                if (name.isEmpty()) {
+                    feedback.setText("Item name is required.");
+                    return;
+                }
+                if (cost < 0 || qty < 0 || avg < 0) {
+                    feedback.setText("Values must be non-negative.");
+                    return;
+                }
+
+                boolean ok = Database.addInventoryItem(name, cost, qty, avg);
+                if (ok) {
+                    displayArea.getChildren().setAll(createStockTab());
+                    dialog.close();
+                } else {
+                    feedback.setText("Add failed.");
                 }
             } catch (NumberFormatException ex) {
                 feedback.setText("Invalid number format.");
