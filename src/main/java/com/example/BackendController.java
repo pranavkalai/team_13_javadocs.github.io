@@ -8,6 +8,9 @@ import java.util.List;
 public class BackendController {
 
     // --- CASHIER LOGIC ---
+    public static List<Product> getMenu() {
+        return Database.getAllProducts();
+    }
 
     /**
      * Calculates the total price of items in the cart.
