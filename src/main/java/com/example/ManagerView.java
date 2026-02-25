@@ -1,32 +1,41 @@
 package com.example;
 
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Line;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class ManagerView {
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
-    private StackPane displayArea = new StackPane();
-    
-    // Moving this inside createTeamTab or handling it via a refresh method is cleaner
-    private VBox tableRowsContainer = new VBox();
+    private final StackPane displayArea = new StackPane();
+    private final VBox tableRowsContainer = new VBox();
 
     public VBox getView() {
         VBox layout = new VBox(20);
@@ -36,7 +45,6 @@ public class ManagerView {
         Label title = new Label("Manager Console");
         title.setStyle("-fx-font-weight: bold; -fx-font-size: 22;");
 
-        // Tab Navigation
         HBox tabs = new HBox();
         Button menuBtn = createTab("Menu");
         Button trendsBtn = createTab("Trends");
@@ -52,20 +60,18 @@ public class ManagerView {
             updateTabStyle(trendsBtn, menuBtn, stockBtn, teamBtn);
             displayArea.getChildren().setAll(createTrendsTab());
         });
-        
+
         stockBtn.setOnAction(e -> {
             updateTabStyle(stockBtn, menuBtn, trendsBtn, teamBtn);
             displayArea.getChildren().setAll(createStockTab());
         });
-        
+
         teamBtn.setOnAction(e -> {
             updateTabStyle(teamBtn, menuBtn, trendsBtn, stockBtn);
             displayArea.getChildren().setAll(createTeamTab());
         });
 
         tabs.getChildren().addAll(menuBtn, trendsBtn, stockBtn, teamBtn);
-        
-        // Default to Menu
         menuBtn.fire();
 
         layout.getChildren().addAll(title, tabs, displayArea);
@@ -74,8 +80,8 @@ public class ManagerView {
 
     private void updateTabStyle(Button active, Button... others) {
         active.setStyle(BORDER + "-fx-background-color: black; -fx-text-fill: white;");
-        for (Button button : others) {
-            button.setStyle(BORDER + "-fx-background-color: white; -fx-text-fill: black;");
+        for (Button b : others) {
+            b.setStyle(BORDER + "-fx-background-color: white; -fx-text-fill: black;");
         }
     }
 
@@ -97,9 +103,9 @@ public class ManagerView {
         HBox tableHead = new HBox();
         tableHead.setStyle("-fx-background-color: #eee; " + BORDER);
         tableHead.getChildren().addAll(
-            createHeaderCell("NAME", 220),
-            createHeaderCell("PRICE", 120),
-            createHeaderCell("ACTIONS", 200)
+                createHeaderCell("NAME", 220),
+                createHeaderCell("PRICE", 120),
+                createHeaderCell("ACTIONS", 200)
         );
 
         VBox rowsContainer = new VBox();
@@ -171,15 +177,12 @@ public class ManagerView {
                     return;
                 }
 
-                System.out.println("[FRONTEND] Manager requested add menu item: name=\"" + name + "\", price=$" + String.format("%.2f", price));
                 boolean inserted = Database.addMenuItem(name, price);
                 if (inserted) {
-                    System.out.println("[BACKEND][LOG] Menu item added successfully.");
                     displayArea.getChildren().setAll(createMenuTab());
                     dialog.close();
                 } else {
                     feedback.setText("Failed to add menu item.");
-                    System.out.println("[BACKEND][LOG] Failed to add menu item.");
                 }
             } catch (NumberFormatException ex) {
                 feedback.setText("Price must be a number.");
@@ -226,16 +229,12 @@ public class ManagerView {
                     return;
                 }
 
-                System.out.println("[FRONTEND] Manager requested update for menuID=" + product.getMenuID()
-                        + " -> name=\"" + name + "\", price=" + String.format("%.2f", price));
                 boolean updated = Database.updateMenuItem(product.getMenuID(), name, price);
                 if (updated) {
-                    System.out.println("[BACKEND][LOG] Menu item updated for menuID=" + product.getMenuID() + ".");
                     displayArea.getChildren().setAll(createMenuTab());
                     dialog.close();
                 } else {
                     feedback.setText("Failed to update menu item.");
-                    System.out.println("[BACKEND][LOG] Failed to update menu item for menuID=" + product.getMenuID() + ".");
                 }
             } catch (NumberFormatException ex) {
                 feedback.setText("Price must be a number.");
@@ -246,7 +245,6 @@ public class ManagerView {
         deleteBtn.setStyle(BORDER + "-fx-background-color: white;");
         deleteBtn.setMaxWidth(Double.MAX_VALUE);
         deleteBtn.setOnAction(e -> {
-            System.out.println("[FRONTEND] Manager requested delete for menuID=" + product.getMenuID() + " (" + product.getName() + ").");
             Alert confirmDelete = new Alert(
                     Alert.AlertType.CONFIRMATION,
                     "Delete \"" + product.getName() + "\" from the menu?",
@@ -261,15 +259,11 @@ public class ManagerView {
             if (result == ButtonType.YES) {
                 boolean deleted = Database.deleteMenuItem(product.getMenuID());
                 if (deleted) {
-                    System.out.println("[BACKEND][LOG] Menu item deleted for menuID=" + product.getMenuID() + ".");
                     displayArea.getChildren().setAll(createMenuTab());
                     dialog.close();
                 } else {
                     feedback.setText("Failed to delete menu item.");
-                    System.out.println("[BACKEND][LOG] Failed to delete menu item for menuID=" + product.getMenuID() + ".");
                 }
-            } else {
-                System.out.println("[LOG] Delete canceled by manager for menuID=" + product.getMenuID() + ".");
             }
         });
 
@@ -281,30 +275,109 @@ public class ManagerView {
     // --- TRENDS TAB ---
     private HBox createTrendsTab() {
         HBox trends = new HBox(20);
-        trends.getChildren().addAll(createTrendCard("Sales History"), createTrendCard("Popular Items"));
+        trends.setFillHeight(true);
+
+        VBox weeklyCard = createTrendCard("Weekly Orders");
+        VBox popularCard = createTrendCard("Popular Items");
+
+        trends.getChildren().addAll(weeklyCard, popularCard);
+        HBox.setHgrow(weeklyCard, Priority.ALWAYS);
+        HBox.setHgrow(popularCard, Priority.ALWAYS);
+
+        loadTrendsAsync(weeklyCard, popularCard);
         return trends;
     }
 
     private VBox createTrendCard(String trendName) {
         VBox card = new VBox();
-        card.setPrefWidth(400);
+        card.setPrefWidth(520);
+        card.setMinWidth(420);
         card.setStyle(BORDER);
-        
+
         Label header = new Label(trendName.toUpperCase());
         header.setStyle("-fx-font-size: 10; -fx-padding: 5; -fx-border-color: transparent transparent black transparent;");
-        
-        StackPane placeholder = new StackPane(new Line(0,0,400,200), new Line(400,0,0,200));
-        placeholder.setPrefHeight(200);
-        
-        card.getChildren().addAll(header, placeholder);
+
+        StackPane body = new StackPane();
+        body.setPadding(new Insets(10));
+        VBox.setVgrow(body, Priority.ALWAYS);
+        body.getChildren().add(new ProgressIndicator());
+
+        card.getChildren().addAll(header, body);
         return card;
+    }
+
+    private void loadTrendsAsync(VBox weeklyCard, VBox popularCard) {
+        StackPane weeklyBody = (StackPane) weeklyCard.getChildren().get(1);
+        StackPane popularBody = (StackPane) popularCard.getChildren().get(1);
+
+        CompletableFuture
+                .supplyAsync(Database::getWeeklyOrders)
+                .thenAccept(rows -> Platform.runLater(() -> weeklyBody.getChildren().setAll(createWeeklyOrdersChart(rows))))
+                .exceptionally(ex -> {
+                    Platform.runLater(() -> weeklyBody.getChildren().setAll(errorPane(ex)));
+                    return null;
+                });
+
+        CompletableFuture
+                .supplyAsync(() -> Database.getPopularItems(20))
+                .thenAccept(rows -> Platform.runLater(() -> popularBody.getChildren().setAll(createPopularItemsTable(rows))))
+                .exceptionally(ex -> {
+                    Platform.runLater(() -> popularBody.getChildren().setAll(errorPane(ex)));
+                    return null;
+                });
+    }
+
+    private Node createWeeklyOrdersChart(List<Database.WeeklyOrdersRow> rows) {
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setLabel("Week start");
+
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel("Orders");
+
+        LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
+        chart.setLegendVisible(false);
+        chart.setCreateSymbols(true);
+        chart.setAnimated(false);
+        chart.setMinHeight(260);
+
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        for (Database.WeeklyOrdersRow r : rows) {
+            series.getData().add(new XYChart.Data<>(r.getWeekStart().toString(), r.getOrdersCount()));
+        }
+        chart.getData().setAll(series);
+        return chart;
+    }
+
+    private Node createPopularItemsTable(List<Database.PopularItemRow> rows) {
+        TableView<Database.PopularItemRow> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setMinHeight(260);
+
+        TableColumn<Database.PopularItemRow, String> itemCol = new TableColumn<>("Item");
+        itemCol.setCellValueFactory(new PropertyValueFactory<>("menuItem"));
+
+        TableColumn<Database.PopularItemRow, Integer> qtyCol = new TableColumn<>("Qty");
+        qtyCol.setCellValueFactory(new PropertyValueFactory<>("totalQuantity"));
+
+        table.getColumns().setAll(itemCol, qtyCol);
+        table.setItems(FXCollections.observableArrayList(rows));
+        return table;
+    }
+
+    private Node errorPane(Throwable ex) {
+        String msg = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
+        Label l = new Label("Failed to load trends.\n" + (msg == null ? "" : msg));
+        l.setWrapText(true);
+        l.setStyle("-fx-text-fill: #b00020;");
+        return new StackPane(l);
     }
 
     // --- STOCK TAB ---
     private GridPane createStockTab() {
         GridPane stockGrid = new GridPane();
-        stockGrid.setHgap(10); stockGrid.setVgap(10);
-        
+        stockGrid.setHgap(10);
+        stockGrid.setVgap(10);
+
         List<InventoryItem> inventory = Database.getAllInventory();
         int row = 0;
         int col = 0;
@@ -316,7 +389,6 @@ public class ManagerView {
                 row++;
             }
         }
-        
         return stockGrid;
     }
 
@@ -325,18 +397,18 @@ public class ManagerView {
         cell.setPadding(new Insets(15));
         cell.setStyle(BORDER);
         cell.setAlignment(Pos.CENTER);
-        
+
         Label name = new Label(item);
         Label amount = new Label(qty);
         amount.setStyle("-fx-font-size: 18; -fx-font-weight: bold;");
-        
+
         Button restock = new Button("Restock");
         restock.setStyle(BORDER + "-fx-background-color: white;");
         restock.setOnAction(e -> {
             BackendController.handleRestock(item);
-            amount.setText("100 units"); // Visual feedback for frontend-first
+            amount.setText("100 units");
         });
-        
+
         cell.getChildren().addAll(name, amount, restock);
         return cell;
     }
@@ -345,24 +417,25 @@ public class ManagerView {
     private VBox createTeamTab() {
         VBox teamLayout = new VBox(10);
         tableRowsContainer.getChildren().clear();
-        
+
         HBox header = new HBox();
         Label teamTitle = new Label("Team Roster");
         teamTitle.setStyle("-fx-font-weight: bold;");
-        Region s = new Region(); HBox.setHgrow(s, Priority.ALWAYS);
-        
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
         Button addBtn = new Button("Add Employee");
         addBtn.setStyle(BORDER);
         addBtn.setOnAction(e -> showAddEmployeeDialog());
-        
-        header.getChildren().addAll(teamTitle, s, addBtn);
-        
+
+        header.getChildren().addAll(teamTitle, spacer, addBtn);
+
         HBox tableHead = new HBox();
         tableHead.setStyle("-fx-background-color: #eee; " + BORDER);
         tableHead.getChildren().addAll(
-            createHeaderCell("NAME", 150), createHeaderCell("ROLE", 100),
-            createHeaderCell("PAY RATE", 100), createHeaderCell("ORDERS", 100),
-            createHeaderCell("ACTIONS", 100)
+                createHeaderCell("NAME", 150), createHeaderCell("ROLE", 100),
+                createHeaderCell("PAY RATE", 100), createHeaderCell("ORDERS", 100),
+                createHeaderCell("ACTIONS", 100)
         );
 
         refreshTeamTable();
@@ -388,15 +461,19 @@ public class ManagerView {
         form.setPadding(new Insets(20));
         form.setStyle(BORDER + "-fx-background-color: white;");
 
-        TextField n = new TextField(); n.setPromptText("Name");
-        TextField r = new TextField(); r.setPromptText("Role");
-        TextField p = new TextField(); p.setPromptText("Pay");
-        n.setStyle(BORDER); r.setStyle(BORDER); p.setStyle(BORDER);
+        TextField n = new TextField();
+        n.setPromptText("Name");
+        TextField r = new TextField();
+        r.setPromptText("Role");
+        TextField p = new TextField();
+        p.setPromptText("Pay");
+        n.setStyle(BORDER);
+        r.setStyle(BORDER);
+        p.setStyle(BORDER);
 
         Button confirm = new Button("Confirm");
         confirm.setStyle(BORDER);
         confirm.setMaxWidth(Double.MAX_VALUE);
-        
         confirm.setOnAction(e -> {
             if (BackendController.validateEmployeeInput(n.getText(), r.getText(), p.getText(), "0")) {
                 BackendController.handleAddEmployee(n.getText(), r.getText(), p.getText());
@@ -425,12 +502,13 @@ public class ManagerView {
         TextField n = new TextField(emp.getName());
         TextField r = new TextField(emp.getJob());
         TextField p = new TextField(String.valueOf(emp.getPay()));
-        n.setStyle(BORDER); r.setStyle(BORDER); p.setStyle(BORDER);
+        n.setStyle(BORDER);
+        r.setStyle(BORDER);
+        p.setStyle(BORDER);
 
         Button confirm = new Button("Save Changes");
         confirm.setStyle(BORDER);
         confirm.setMaxWidth(Double.MAX_VALUE);
-        
         confirm.setOnAction(e -> {
             if (BackendController.validateEmployeeInput(n.getText(), r.getText(), p.getText(), "0")) {
                 BackendController.handleUpdateEmployee(emp.getEmployeeID(), n.getText(), r.getText(), p.getText());
@@ -459,27 +537,32 @@ public class ManagerView {
     private void addEmployeeRow(Employee emp) {
         HBox row = new HBox();
         row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5;");
-        
+
         Button editBtn = new Button("Edit");
         editBtn.setStyle(BORDER + "-fx-font-size: 10;");
         editBtn.setOnAction(e -> showEditEmployeeDialog(emp));
 
         row.getChildren().addAll(
-            createDataCell(emp.getName(), 150), createDataCell(emp.getJob(), 100),
-            createDataCell("$" + emp.getPay() + "/hr", 100), createDataCell(String.valueOf(emp.getOrderNum()), 100),
-            new StackPane(editBtn)
+                createDataCell(emp.getName(), 150),
+                createDataCell(emp.getJob(), 100),
+                createDataCell("$" + emp.getPay() + "/hr", 100),
+                createDataCell(String.valueOf(emp.getOrderNum()), 100),
+                new StackPane(editBtn)
         );
         tableRowsContainer.getChildren().add(row);
     }
 
     private Label createHeaderCell(String t, double w) {
-        Label l = new Label(t); l.setPrefWidth(w);
+        Label l = new Label(t);
+        l.setPrefWidth(w);
         l.setStyle("-fx-font-weight: bold; -fx-font-size: 10; -fx-padding: 5;");
         return l;
     }
 
     private Label createDataCell(String t, double w) {
-        Label l = new Label(t); l.setPrefWidth(w); l.setStyle("-fx-padding: 5;");
+        Label l = new Label(t);
+        l.setPrefWidth(w);
+        l.setStyle("-fx-padding: 5;");
         return l;
     }
 
@@ -490,3 +573,4 @@ public class ManagerView {
         return b;
     }
 }
+
