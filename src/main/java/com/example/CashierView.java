@@ -41,7 +41,8 @@ public class CashierView {
         GridPane grid = new GridPane();
         grid.setHgap(20); grid.setVgap(20);
         
-        List<Product> products = Database.getAllProducts();
+        // List<Product> products = Database.getAllProducts();
+        List<Product> products = BackendController.getMenu();
         int index = 0;
         for (Product p : products) {
             grid.add(createProductCard(p), index % 3, index / 3);
