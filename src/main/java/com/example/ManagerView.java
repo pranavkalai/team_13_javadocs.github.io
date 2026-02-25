@@ -74,6 +74,8 @@ public class ManagerView {
         tabs.getChildren().addAll(menuBtn, trendsBtn, stockBtn, teamBtn);
         menuBtn.fire();
 
+        displayArea.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        VBox.setVgrow(displayArea, Priority.ALWAYS);
         layout.getChildren().addAll(title, tabs, displayArea);
         return layout;
     }
@@ -88,6 +90,8 @@ public class ManagerView {
     // --- MENU TAB ---
     private VBox createMenuTab() {
         VBox menuLayout = new VBox(10);
+        menuLayout.setFillWidth(true);
+        menuLayout.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         HBox header = new HBox();
         Label menuTitle = new Label("Menu Management");
@@ -118,7 +122,8 @@ public class ManagerView {
         scrollPane.setFitToWidth(true);
         scrollPane.setPannable(true);
         scrollPane.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
-        scrollPane.setPrefHeight(520);
+        scrollPane.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
         menuLayout.getChildren().addAll(header, tableHead, scrollPane);
         return menuLayout;
