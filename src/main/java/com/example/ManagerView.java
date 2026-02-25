@@ -378,44 +378,114 @@ public class ManagerView {
     }
 
     // --- STOCK TAB ---
-    private GridPane createStockTab() {
+    private ScrollPane createStockTab() {
         GridPane stockGrid = new GridPane();
-        stockGrid.setHgap(10);
-        stockGrid.setVgap(10);
+        stockGrid.setHgap(15);
+        stockGrid.setVgap(15);
+        stockGrid.setPadding(new Insets(10));
 
         List<InventoryItem> inventory = Database.getAllInventory();
         int row = 0;
         int col = 0;
         for (InventoryItem item : inventory) {
-            stockGrid.add(createStockCell(item.getName(), item.getInventoryNum() + " units"), col, row);
+            stockGrid.add(createStockCell(item), col, row);
             col++;
-            if (col > 2) {
+            if (col > 3) {
                 col = 0;
                 row++;
             }
         }
-        return stockGrid;
+
+        ScrollPane scrollPane = new ScrollPane(stockGrid);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
+        scrollPane.setPrefHeight(600);
+        return scrollPane;
     }
 
-    private VBox createStockCell(String item, String qty) {
+    private VBox createStockCell(InventoryItem item) {
         VBox cell = new VBox(10);
         cell.setPadding(new Insets(15));
         cell.setStyle(BORDER);
         cell.setAlignment(Pos.CENTER);
+        cell.setPrefWidth(200);
 
-        Label name = new Label(item);
-        Label amount = new Label(qty);
-        amount.setStyle("-fx-font-size: 18; -fx-font-weight: bold;");
+        if (item.getInventoryNum() < 50) {
+            cell.setStyle(BORDER + "-fx-background-color: #ffebee;");
+        }
+
+        Label name = new Label(item.getName());
+        name.setStyle("-fx-font-weight: bold;");
+        Label amount = new Label(item.getInventoryNum() + " units");
+        amount.setStyle("-fx-font-size: 16;");
+
+        HBox actions = new HBox(10);
+        actions.setAlignment(Pos.CENTER);
 
         Button restock = new Button("Restock");
-        restock.setStyle(BORDER + "-fx-background-color: white;");
+        restock.setStyle(BORDER + "-fx-background-color: white; -fx-font-size: 10;");
         restock.setOnAction(e -> {
-            BackendController.handleRestock(item);
-            amount.setText("100 units");
+            BackendController.handleRestock(item.getName());
+            displayArea.getChildren().setAll(createStockTab());
         });
 
-        cell.getChildren().addAll(name, amount, restock);
+        Button edit = new Button("Edit");
+        edit.setStyle(BORDER + "-fx-background-color: white; -fx-font-size: 10;");
+        edit.setOnAction(e -> showEditInventoryDialog(item));
+
+        actions.getChildren().addAll(restock, edit);
+        cell.getChildren().addAll(name, amount, actions);
         return cell;
+    }
+
+    private void showEditInventoryDialog(InventoryItem item) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Edit Inventory Item");
+
+        VBox form = new VBox(10);
+        form.setPadding(new Insets(20));
+        form.setStyle(BORDER + "-fx-background-color: white;");
+
+        TextField nameField = new TextField(item.getName());
+        TextField priceField = new TextField(String.valueOf(item.getCost()));
+        TextField qtyField = new TextField(String.valueOf(item.getInventoryNum()));
+        TextField avgField = new TextField(String.valueOf(item.getUseAverage()));
+
+        Label feedback = new Label();
+        feedback.setStyle("-fx-text-fill: red;");
+
+        Button confirm = new Button("Save Changes");
+        confirm.setStyle(BORDER);
+        confirm.setMaxWidth(Double.MAX_VALUE);
+        confirm.setOnAction(e -> {
+            try {
+                String name = nameField.getText().trim();
+                double cost = Double.parseDouble(priceField.getText());
+                int qty = Integer.parseInt(qtyField.getText());
+                int avg = Integer.parseInt(avgField.getText());
+
+                boolean ok = Database.updateInventoryItem(item.getInventoryID(), name, cost, qty, avg);
+                if (ok) {
+                    displayArea.getChildren().setAll(createStockTab());
+                    dialog.close();
+                } else {
+                    feedback.setText("Update failed.");
+                }
+            } catch (NumberFormatException ex) {
+                feedback.setText("Invalid number format.");
+            }
+        });
+
+        form.getChildren().addAll(
+                new Label("Item Name"), nameField,
+                new Label("Cost Per Unit"), priceField,
+                new Label("Current Quantity"), qtyField,
+                new Label("Usage Average"), avgField,
+                confirm, feedback
+        );
+        dialog.setScene(new Scene(form, 300, 450));
+        dialog.show();
     }
 
     // --- TEAM TAB ---
