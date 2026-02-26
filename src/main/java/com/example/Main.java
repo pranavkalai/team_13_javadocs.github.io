@@ -1,6 +1,7 @@
 package com.example;
 
 import javafx.application.Application;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -11,6 +12,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import java.util.List;
+import javafx.application.Platform;
 
 public class Main extends Application {
     private StackPane contentArea = new StackPane();
@@ -20,11 +22,12 @@ public class Main extends Application {
     public void start(Stage stage) {
         stage.setTitle("BOBA SHOP POS");
         showEmployeeLogin(stage);
-    }   
+    }
 
     public void showEmployeeLogin(Stage stage) {
         List<Employee> employees = Database.getAllEmployees();
-        VBox layout = new VBox(0);
+        VBox layout = new VBox(10);
+        layout.setPadding(new Insets(20));
         layout.setStyle("-fx-background-color: white;");
 
         // Header
@@ -44,18 +47,25 @@ public class Main extends Application {
             Button btn = new Button(emp.getName() + "  —  " + emp.getJob());
             btn.setMaxWidth(Double.MAX_VALUE);
             btn.setPrefHeight(60);
-            btn.setStyle("-fx-background-color: white; -fx-border-color: transparent transparent black transparent; -fx-background-radius: 0; -fx-alignment: CENTER-LEFT; -fx-padding: 0 0 0 20;");
+            btn.setStyle(
+                    "-fx-background-color: white; -fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-alignment: CENTER-LEFT; -fx-padding: 0 0 0 20;");
+            btn.setOnMouseEntered(e -> btn.setStyle(
+                    "-fx-background-color: black; -fx-text-fill: white; -fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-alignment: CENTER-LEFT; -fx-padding: 0 0 0 20;"));
+            btn.setOnMouseExited(e -> btn.setStyle(
+                    "-fx-background-color: white; -fx-text-fill: black; -fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-alignment: CENTER-LEFT; -fx-padding: 0 0 0 20;"));
             btn.setOnAction(e -> launchMainApp(stage, emp.getEmployeeID()));
             layout.getChildren().add(btn);
         }
 
         Scene scene = new Scene(layout, 1200, 800);
         stage.setScene(scene);
-        stage.setResizable(true);
-        stage.setMaximized(true);
+        stage.setMaximized(false);
+        Platform.runLater(() -> stage.setMaximized(true));
         stage.show();
     }
+
     private void launchMainApp(Stage stage, int employeeID) {
+        contentArea = new StackPane(); // reset content area for new employee
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: white;");
 
@@ -87,34 +97,35 @@ public class Main extends Application {
         // Main Body Container to fix resizing issues
         HBox body = new HBox(sidebar, contentArea);
         HBox.setHgrow(contentArea, Priority.ALWAYS);
-        
+
         root.setCenter(body);
 
         cashierBtn.fire();
-        
+
         Scene scene = new Scene(root, 1200, 800);
         stage.setScene(scene);
+        stage.setMaximized(false);
+        Platform.runLater(() -> stage.setMaximized(true));
 
-        // --- WINDOW CONTROLS ---
-        stage.setResizable(true); 
-        stage.setMaximized(true); 
-        
         stage.setTitle("BOBA SHOP POS");
-        stage.show();
     }
 
     private Button createSideBtn(String text) {
         Button b = new Button(text);
         b.setMaxWidth(Double.MAX_VALUE);
         b.setPrefHeight(60);
-        b.setStyle("-fx-background-color: white; -fx-border-color: transparent transparent black transparent; -fx-background-radius: 0;");
+        b.setStyle(
+                "-fx-background-color: white; -fx-border-color: transparent transparent black transparent; -fx-background-radius: 0;");
         return b;
     }
 
     private void setActive(Button active, Button inactive) {
         active.setStyle("-fx-background-color: black; -fx-text-fill: white; " + BORDER);
-        inactive.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: transparent transparent black transparent; -fx-background-radius: 0;");
+        inactive.setStyle(
+                "-fx-background-color: white; -fx-text-fill: black; -fx-border-color: transparent transparent black transparent; -fx-background-radius: 0;");
     }
 
-    public static void main(String[] args) { launch(args); }
+    public static void main(String[] args) {
+        launch(args);
+    }
 }
