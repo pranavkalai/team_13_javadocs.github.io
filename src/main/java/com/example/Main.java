@@ -12,7 +12,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import java.util.List;
-import javafx.application.Platform;
 
 public class Main extends Application {
     private StackPane contentArea = new StackPane();
@@ -59,8 +58,7 @@ public class Main extends Application {
 
         Scene scene = new Scene(layout, 1200, 800);
         stage.setScene(scene);
-        stage.setMaximized(false);
-        Platform.runLater(() -> stage.setMaximized(true));
+        stage.setFullScreen(true);
         stage.show();
     }
 
@@ -104,8 +102,7 @@ public class Main extends Application {
 
         Scene scene = new Scene(root, 1200, 800);
         stage.setScene(scene);
-        stage.setMaximized(false);
-        Platform.runLater(() -> stage.setMaximized(true));
+        stage.setFullScreen(true);
 
         stage.setTitle("BOBA SHOP POS");
     }
