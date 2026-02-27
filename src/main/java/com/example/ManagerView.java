@@ -22,6 +22,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -179,7 +180,10 @@ public class ManagerView {
         Label ingredientsLabel = new Label("Associated Inventory Ingredients");
         ingredientsLabel.setStyle("-fx-font-weight: bold;");
 
-        VBox ingredientsContainer = new VBox(8);
+        FlowPane ingredientsFlow = new FlowPane();
+        ingredientsFlow.setHgap(10);
+        ingredientsFlow.setVgap(10);
+        ingredientsFlow.setPrefWrapLength(620);
         List<InventoryItem> inventoryItems = Database.getAllInventory();
         List<IngredientSelection> ingredientSelections = new java.util.ArrayList<>();
         for (InventoryItem inventoryItem : inventoryItems) {
@@ -197,16 +201,22 @@ public class ManagerView {
                 }
             });
 
-            HBox ingredientRow = new HBox(10, useIngredient, qtyField);
-            ingredientRow.setAlignment(Pos.CENTER_LEFT);
-            ingredientsContainer.getChildren().add(ingredientRow);
+            VBox ingredientCell = new VBox(8, useIngredient, qtyField);
+            ingredientCell.setPadding(new Insets(10));
+            ingredientCell.setStyle(BORDER + "-fx-background-color: white;");
+            ingredientCell.setPrefWidth(200);
+            ingredientsFlow.getChildren().add(ingredientCell);
             ingredientSelections.add(new IngredientSelection(inventoryItem, useIngredient, qtyField));
         }
 
-        ScrollPane ingredientsScroll = new ScrollPane(ingredientsContainer);
+        ScrollPane ingredientsScroll = new ScrollPane(ingredientsFlow);
         ingredientsScroll.setFitToWidth(true);
-        ingredientsScroll.setPrefHeight(180);
+        ingredientsScroll.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         ingredientsScroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: #ddd;");
+        ingredientsScroll.viewportBoundsProperty().addListener((obs, oldVal, newVal) ->
+                ingredientsFlow.setPrefWrapLength(Math.max(220, newVal.getWidth() - 20))
+        );
+        VBox.setVgrow(ingredientsScroll, Priority.ALWAYS);
 
         Label feedback = new Label();
         feedback.setStyle("-fx-text-fill: red;");
@@ -273,7 +283,9 @@ public class ManagerView {
                 confirm,
                 feedback
         );
-        dialog.setScene(new Scene(form, 420, 500));
+        form.setFillWidth(true);
+        form.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        dialog.setScene(new Scene(form, 680, 620));
         dialog.show();
     }
 
