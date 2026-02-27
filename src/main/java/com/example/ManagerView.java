@@ -6,13 +6,14 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
-import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
@@ -29,6 +30,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -273,95 +275,112 @@ public class ManagerView {
     }
 
     // --- TRENDS TAB ---
-    private HBox createTrendsTab() {
-        HBox trends = new HBox(20);
-        trends.setFillHeight(true);
+    private VBox createTrendsTab() {
+        VBox layout = new VBox(15);
+        layout.setPadding(new Insets(10));
 
-        VBox weeklyCard = createTrendCard("Weekly Orders");
-        VBox popularCard = createTrendCard("Popular Items");
+        Label title = new Label("Inventory usage by time window");
+        title.setStyle("-fx-font-weight: bold;");
 
-        trends.getChildren().addAll(weeklyCard, popularCard);
-        HBox.setHgrow(weeklyCard, Priority.ALWAYS);
-        HBox.setHgrow(popularCard, Priority.ALWAYS);
+        DatePicker startPicker = new DatePicker(LocalDate.now().minusDays(7));
+        DatePicker endPicker = new DatePicker(LocalDate.now());
 
-        loadTrendsAsync(weeklyCard, popularCard);
-        return trends;
-    }
+        startPicker.setStyle(BORDER);
+        endPicker.setStyle(BORDER);
 
-    private VBox createTrendCard(String trendName) {
-        VBox card = new VBox();
-        card.setPrefWidth(520);
-        card.setMinWidth(420);
-        card.setStyle(BORDER);
+        Button loadBtn = new Button("Load");
+        loadBtn.setStyle(BORDER + "-fx-background-color: white;");
 
-        Label header = new Label(trendName.toUpperCase());
-        header.setStyle("-fx-font-size: 10; -fx-padding: 5; -fx-border-color: transparent transparent black transparent;");
+        Label status = new Label();
+        status.setStyle("-fx-text-fill: #666;");
 
-        StackPane body = new StackPane();
-        body.setPadding(new Insets(10));
-        VBox.setVgrow(body, Priority.ALWAYS);
-        body.getChildren().add(new ProgressIndicator());
+        HBox controls = new HBox(10,
+                new Label("Start"), startPicker,
+                new Label("End"), endPicker,
+                loadBtn,
+                status
+        );
+        controls.setAlignment(Pos.CENTER_LEFT);
 
-        card.getChildren().addAll(header, body);
-        return card;
-    }
+        StackPane chartPane = new StackPane(new ProgressIndicator());
+        chartPane.setMinHeight(300);
+        chartPane.setStyle(BORDER);
 
-    private void loadTrendsAsync(VBox weeklyCard, VBox popularCard) {
-        StackPane weeklyBody = (StackPane) weeklyCard.getChildren().get(1);
-        StackPane popularBody = (StackPane) popularCard.getChildren().get(1);
-
-        CompletableFuture
-                .supplyAsync(Database::getWeeklyOrders)
-                .thenAccept(rows -> Platform.runLater(() -> weeklyBody.getChildren().setAll(createWeeklyOrdersChart(rows))))
-                .exceptionally(ex -> {
-                    Platform.runLater(() -> weeklyBody.getChildren().setAll(errorPane(ex)));
-                    return null;
-                });
-
-        CompletableFuture
-                .supplyAsync(() -> Database.getPopularItems(20))
-                .thenAccept(rows -> Platform.runLater(() -> popularBody.getChildren().setAll(createPopularItemsTable(rows))))
-                .exceptionally(ex -> {
-                    Platform.runLater(() -> popularBody.getChildren().setAll(errorPane(ex)));
-                    return null;
-                });
-    }
-
-    private Node createWeeklyOrdersChart(List<Database.WeeklyOrdersRow> rows) {
-        CategoryAxis xAxis = new CategoryAxis();
-        xAxis.setLabel("Week start");
-
-        NumberAxis yAxis = new NumberAxis();
-        yAxis.setLabel("Orders");
-
-        LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
-        chart.setLegendVisible(false);
-        chart.setCreateSymbols(true);
-        chart.setAnimated(false);
-        chart.setMinHeight(260);
-
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        for (Database.WeeklyOrdersRow r : rows) {
-            series.getData().add(new XYChart.Data<>(r.getWeekStart().toString(), r.getOrdersCount()));
-        }
-        chart.getData().setAll(series);
-        return chart;
-    }
-
-    private Node createPopularItemsTable(List<Database.PopularItemRow> rows) {
-        TableView<Database.PopularItemRow> table = new TableView<>();
+        TableView<Database.InventoryUsageRow> table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        table.setMinHeight(260);
 
-        TableColumn<Database.PopularItemRow, String> itemCol = new TableColumn<>("Item");
-        itemCol.setCellValueFactory(new PropertyValueFactory<>("menuItem"));
+        TableColumn<Database.InventoryUsageRow, String> invCol = new TableColumn<>("Inventory item");
+        invCol.setCellValueFactory(new PropertyValueFactory<>("inventoryItem"));
+        TableColumn<Database.InventoryUsageRow, Integer> usedCol = new TableColumn<>("Units used");
+        usedCol.setCellValueFactory(new PropertyValueFactory<>("unitsUsed"));
+        table.getColumns().setAll(invCol, usedCol);
 
-        TableColumn<Database.PopularItemRow, Integer> qtyCol = new TableColumn<>("Qty");
-        qtyCol.setCellValueFactory(new PropertyValueFactory<>("totalQuantity"));
+        VBox.setVgrow(table, Priority.ALWAYS);
 
-        table.getColumns().setAll(itemCol, qtyCol);
-        table.setItems(FXCollections.observableArrayList(rows));
-        return table;
+        Runnable runLoad = () -> {
+            LocalDate start = startPicker.getValue();
+            LocalDate end = endPicker.getValue();
+            if (start == null || end == null) {
+                status.setText("Pick both start and end dates.");
+                status.setStyle("-fx-text-fill: #b00020;");
+                return;
+            }
+            if (end.isBefore(start)) {
+                status.setText("End date must be on/after start date.");
+                status.setStyle("-fx-text-fill: #b00020;");
+                return;
+            }
+
+            status.setText("Loading…");
+            status.setStyle("-fx-text-fill: #666;");
+            loadBtn.setDisable(true);
+            chartPane.getChildren().setAll(new ProgressIndicator());
+
+            CompletableFuture
+                    .supplyAsync(() -> Database.getInventoryUsage(start, end))
+                    .thenAccept(rows -> Platform.runLater(() -> {
+                        table.setItems(FXCollections.observableArrayList(rows));
+                        chartPane.getChildren().setAll(createInventoryUsageChart(rows));
+                        status.setText(rows.isEmpty() ? "No inventory usage in this range." : ("Loaded " + rows.size() + " items."));
+                        status.setStyle("-fx-text-fill: #666;");
+                        loadBtn.setDisable(false);
+                    }))
+                    .exceptionally(ex -> {
+                        Platform.runLater(() -> {
+                            chartPane.getChildren().setAll(errorPane(ex));
+                            status.setText("Failed to load.");
+                            status.setStyle("-fx-text-fill: #b00020;");
+                            loadBtn.setDisable(false);
+                        });
+                        return null;
+                    });
+        };
+
+        loadBtn.setOnAction(e -> runLoad.run());
+        runLoad.run();
+
+        layout.getChildren().addAll(title, controls, chartPane, table);
+        return layout;
+    }
+
+    private Node createInventoryUsageChart(List<Database.InventoryUsageRow> rows) {
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setLabel("Inventory item");
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel("Units used");
+
+        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+        chart.setLegendVisible(false);
+        chart.setAnimated(false);
+
+        XYChart.Series<String, Number> s = new XYChart.Series<>();
+        int limit = Math.min(rows.size(), 12);
+        for (int i = 0; i < limit; i++) {
+            Database.InventoryUsageRow r = rows.get(i);
+            s.getData().add(new XYChart.Data<>(r.getInventoryItem(), r.getUnitsUsed()));
+        }
+        chart.getData().setAll(s);
+        return chart;
     }
 
     private Node errorPane(Throwable ex) {
