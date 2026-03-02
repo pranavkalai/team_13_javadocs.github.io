@@ -4,41 +4,49 @@ import java.util.List;
 
 /**
  * Acts as the bridge between the Wireframe UI and the Data.
- * Currently holds "Mock" data for Frontend-first development.
  */
 public class BackendController {
 
     // --- CASHIER LOGIC ---
+    public static List<Product> getMenu() {
+        return Database.getAllProducts();
+    }
 
     /**
      * Calculates the total price of items in the cart.
-     * Maps to Page 1 of the wireframe for the "Total: $X.XX" label.
      */
     public static double calculateCartTotal(List<CartItem> cartItems) {
-        // Mock logic: assuming all Boba tea items are $5.00 for now.
         return cartItems.stream().mapToDouble(CartItem::getCost).sum();
     }
 
     /**
-     * Placeholder for the "Place Order" button logic.
-     * In the future, this will call Database.submitOrder().
+     * Logic for the "Place Order" button.
+     * @return true if successful, false if inventory check failed or database error.
      */
-    public static void handlePlaceOrder(String customerName, List<CartItem> cartItems) {
+    public static boolean handlePlaceOrder(String customerName, int employeeID, List<CartItem> cartItems) {
         if (cartItems.isEmpty()) {
             System.out.println("[WARN] Attempted to place order with empty cart.");
-            return;
+            return false;
         }
+        
         try {
-            //replace with actual employeeID once we have login implemented !!!
-            int employeeID = 1;
+            // Validate inventory before submitting
+            if (!Database.canFulfillOrder(cartItems)) {
+                System.out.println("[BACKEND] Order rejected: Insufficient inventory.");
+                return false;
+            }
 
+            // Hardcoded employeeID for now, will be replaced by login system. - changing it now
+            //int employeeID = 1;
             Database.submitOrder(customerName, employeeID, cartItems);
-
+            
             System.out.println("[BACKEND] Order successfully saved.");
+            return true;
 
         } catch (Exception e) {
             System.out.println("[BACKEND ERROR] Failed to save order.");
             e.printStackTrace();
+            return false;
         }
     }
 
@@ -48,12 +56,9 @@ public class BackendController {
      * Validates employee input from the Add Employee Dialog.
      */
     public static boolean validateEmployeeInput(String name, String role, String pay, String hrs) {
-        // Frontend check: ensure no fields are empty
         if (name.isEmpty() || role.isEmpty() || pay.isEmpty() || hrs.isEmpty()) {
             return false;
         }
-
-        // Ensure pay and hours are actually numbers to avoid crashes later
         try {
             Double.parseDouble(pay);
             Double.parseDouble(hrs);
@@ -92,17 +97,16 @@ public class BackendController {
     // --- MANAGER LOGIC: STOCK ---
 
     /**
-     * Mock data for initial inventory levels (Boba, Sugar, Milk).
-     */
-    public static String getMockInventoryLevel(String itemName) {
-        // Matches the wireframe starting state of "0 units".
-        return "0 units";
-    }
-
-    /**
      * Logic for the "Restock" button interaction.
      */
     public static void handleRestock(String itemName) {
-        System.out.println("[FRONTEND LOGIC] Restock triggered for: " + itemName);
+        try {
+            // Default restock amount of 100 units
+            Database.restockItem(itemName, 100);
+            System.out.println("[BACKEND] Restock successful for: " + itemName);
+        } catch (Exception e) {
+            System.out.println("[BACKEND ERROR] Restock failed for: " + itemName);
+            e.printStackTrace();
+        }
     }
 }

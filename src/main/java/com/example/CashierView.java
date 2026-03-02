@@ -29,6 +29,15 @@ public class CashierView {
     private Label cartLabel = new Label("Cart (0)");
     private Label totalLabel = new Label("Total: $0.00");
     private StackPane emptyCartPlaceholder = new StackPane(new Label("Cart Empty"));
+    private final int employeeID;
+
+    //constructor to be used with login
+    public CashierView() {
+        this.employeeID = 1; 
+    }
+    public CashierView(int employeeID) {
+        this.employeeID = employeeID;
+    }
 
     public HBox getView() {
         HBox layout = new HBox();
@@ -41,7 +50,8 @@ public class CashierView {
         GridPane grid = new GridPane();
         grid.setHgap(20); grid.setVgap(20);
         
-        List<Product> products = Database.getAllProducts();
+        // List<Product> products = Database.getAllProducts();
+        List<Product> products = BackendController.getMenu();
         int index = 0;
         for (Product p : products) {
             grid.add(createProductCard(p), index % 3, index / 3);
@@ -131,11 +141,21 @@ public class CashierView {
     }
 
     private void finalizeOrder(String method, Stage popup, String customerName) {
-        // Now passing the actual name from the UI
-        BackendController.handlePlaceOrder(customerName, cartItems);
-        cartItems.clear();
-        updateCartUI();
-        popup.close(); 
+        // Capture success status from backend
+        boolean success = BackendController.handlePlaceOrder(customerName, employeeID, cartItems);
+        
+        if (success) {
+            cartItems.clear();
+            updateCartUI();
+            popup.close(); 
+        } else {
+            // Show error if order failed (e.g., due to stock)
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+            alert.setTitle("Order Error");
+            alert.setHeaderText("Order Failed");
+            alert.setContentText("Insufficient inventory to fulfill this order!");
+            alert.showAndWait();
+        }
     }
 
     private VBox createProductCard(Product p) {

@@ -12,7 +12,9 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Database {
     private static final Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
@@ -29,8 +31,13 @@ public class Database {
             this.ordersCount = ordersCount;
         }
 
-        public LocalDate getWeekStart() { return weekStart; }
-        public int getOrdersCount() { return ordersCount; }
+        public LocalDate getWeekStart() {
+            return weekStart;
+        }
+
+        public int getOrdersCount() {
+            return ordersCount;
+        }
     }
 
     public static class PopularItemRow {
@@ -42,8 +49,31 @@ public class Database {
             this.totalQuantity = totalQuantity;
         }
 
-        public String getMenuItem() { return menuItem; }
-        public int getTotalQuantity() { return totalQuantity; }
+        public String getMenuItem() {
+            return menuItem;
+        }
+
+        public int getTotalQuantity() {
+            return totalQuantity;
+        }
+    }
+
+    public static class StockLevelRow {
+        private final String name;
+        private final int stock;
+
+        public StockLevelRow(String name, int stock) {
+            this.name = name;
+            this.stock = stock;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getStock() {
+            return stock;
+        }
     }
 
     public static class InventoryUsageRow {
@@ -70,15 +100,14 @@ public class Database {
         List<Product> products = new ArrayList<>();
         String sql = "SELECT * FROM menu ORDER BY name";
         try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 products.add(new Product(
                         rs.getInt("menuID"),
                         rs.getString("name"),
                         rs.getDouble("cost"),
-                        rs.getInt("salesNum")
-                ));
+                        rs.getInt("salesNum")));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -89,7 +118,7 @@ public class Database {
     public static boolean addMenuItem(String name, double cost) {
         String sql = "INSERT INTO menu (menuID, name, cost, salesNum) VALUES (?, ?, ?, ?)";
         try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             int menuID = getNextID(conn, "menu", "menuID");
             ps.setInt(1, menuID);
             ps.setString(2, name);
@@ -106,7 +135,7 @@ public class Database {
     public static boolean updateMenuItem(int menuID, String name, double cost) {
         String sql = "UPDATE menu SET name = ?, cost = ? WHERE menuID = ?";
         try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, name);
             ps.setDouble(2, cost);
             ps.setInt(3, menuID);
@@ -120,7 +149,7 @@ public class Database {
     public static boolean deleteMenuItem(int menuID) {
         String sql = "DELETE FROM menu WHERE menuID = ?";
         try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, menuID);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -133,16 +162,15 @@ public class Database {
         List<InventoryItem> items = new ArrayList<>();
         String sql = "SELECT * FROM inventory ORDER BY name";
         try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 items.add(new InventoryItem(
                         rs.getInt("inventoryID"),
                         rs.getString("name"),
                         rs.getDouble("cost"),
                         rs.getInt("inventoryNum"),
-                        rs.getInt("useAverage")
-                ));
+                        rs.getInt("useAverage")));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -150,20 +178,65 @@ public class Database {
         return items;
     }
 
+    public static boolean updateInventoryItem(int id, String name, double cost, int qty, int avg) {
+        String sql = "UPDATE inventory SET name = ?, cost = ?, inventoryNum = ?, useAverage = ? WHERE inventoryID = ?";
+        try (Connection conn = getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.setDouble(2, cost);
+            ps.setInt(3, qty);
+            ps.setInt(4, avg);
+            ps.setInt(5, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean addInventoryItem(String name, double cost, int qty, int avg) {
+        String sql = "INSERT INTO inventory (inventoryID, name, cost, inventoryNum, useAverage) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            int inventoryID = getNextID(conn, "inventory", "inventoryID");
+            ps.setInt(1, inventoryID);
+            ps.setString(2, name);
+            ps.setDouble(3, cost);
+            ps.setInt(4, qty);
+            ps.setInt(5, avg);
+            ps.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean deleteInventoryItem(int inventoryID) {
+        String sql = "DELETE FROM inventory WHERE inventoryID = ?";
+        try (Connection conn = getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, inventoryID);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public static List<Employee> getAllEmployees() {
         List<Employee> employees = new ArrayList<>();
         String sql = "SELECT * FROM employees ORDER BY name";
         try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 employees.add(new Employee(
                         rs.getInt("employeeID"),
                         rs.getString("name"),
                         rs.getDouble("pay"),
                         rs.getString("job"),
-                        rs.getInt("orderNum")
-                ));
+                        rs.getInt("orderNum")));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -214,22 +287,21 @@ public class Database {
     public static List<WeeklyOrdersRow> getWeeklyOrders() {
         List<WeeklyOrdersRow> rows = new ArrayList<>();
         String sql = """
-            SELECT
-              date_trunc('week', orderdatetime)::date AS week_start,
-              COUNT(*) AS orders_count
-            FROM orders
-            GROUP BY date_trunc('week', orderdatetime)::date
-            ORDER BY week_start;
-            """;
+                SELECT
+                  date_trunc('week', orderdatetime)::date AS week_start,
+                  COUNT(*) AS orders_count
+                FROM orders
+                GROUP BY date_trunc('week', orderdatetime)::date
+                ORDER BY week_start;
+                """;
 
         try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 rows.add(new WeeklyOrdersRow(
                         rs.getDate("week_start").toLocalDate(),
-                        rs.getInt("orders_count")
-                ));
+                        rs.getInt("orders_count")));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -240,27 +312,26 @@ public class Database {
     public static List<PopularItemRow> getPopularItems(int limit) {
         List<PopularItemRow> rows = new ArrayList<>();
         String sql = """
-            SELECT
-              m.name AS menu_item,
-              SUM(oi.quantity)::int AS total_quantity
-            FROM order_items oi
-            JOIN menu m
-              ON oi.menuID = m.menuID
-            GROUP BY m.name
-            ORDER BY total_quantity DESC
-            LIMIT ?;
-            """;
+                SELECT
+                  m.name AS menu_item,
+                  SUM(oi.quantity)::int AS total_quantity
+                FROM order_items oi
+                JOIN menu m
+                  ON oi.menuID = m.menuID
+                GROUP BY m.name
+                ORDER BY total_quantity DESC
+                LIMIT ?;
+                """;
 
         try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, limit);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     rows.add(new PopularItemRow(
                             rs.getString("menu_item"),
-                            rs.getInt("total_quantity")
-                    ));
+                            rs.getInt("total_quantity")));
                 }
             }
         } catch (SQLException e) {
@@ -310,16 +381,81 @@ public class Database {
         return rows;
     }
 
+    public static List<StockLevelRow> getLowestStock(int limit) {
+        List<StockLevelRow> rows = new ArrayList<>();
+        String sql = "SELECT name, inventoryNum FROM inventory ORDER BY inventoryNum ASC LIMIT ?";
+        try (Connection conn = getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new StockLevelRow(rs.getString("name"), rs.getInt("inventoryNum")));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return rows;
+    }
+
+    /**
+     * Checks if the order can be fulfilled based on current inventory.
+     */
+    public static boolean canFulfillOrder(List<CartItem> cartItems) {
+        Map<Integer, Integer> requiredIngredients = new HashMap<>();
+        String recipeSql = "SELECT inventoryID, itemQuantity FROM menu_items WHERE menuID = ?";
+
+        try (Connection conn = getConnection()) {
+            for (CartItem item : cartItems) {
+                try (PreparedStatement ps = conn.prepareStatement(recipeSql)) {
+                    ps.setInt(1, item.getMenuID());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            int invID = rs.getInt("inventoryID");
+                            int qty = rs.getInt("itemQuantity");
+                            requiredIngredients.put(invID, requiredIngredients.getOrDefault(invID, 0) + qty);
+                        }
+                    }
+                }
+            }
+
+            // Check against inventory
+            String invSql = "SELECT inventoryNum FROM inventory WHERE inventoryID = ?";
+            for (Map.Entry<Integer, Integer> entry : requiredIngredients.entrySet()) {
+                try (PreparedStatement ps = conn.prepareStatement(invSql)) {
+                    ps.setInt(1, entry.getKey());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            int stock = rs.getInt("inventoryNum");
+                            if (stock < entry.getValue()) {
+                                return false; // Not enough stock
+                            }
+                        } else {
+                            return false; // Ingredient missing from inventory table
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
     public static void submitOrder(String customer, int empID, List<CartItem> cartItems) {
         String ordSql = "INSERT INTO orders (orderID, customerName, costTotal, employeeID, orderDateTime) VALUES (?, ?, ?, ?, ?)";
         String itemSql = "INSERT INTO order_items (ID, menuID, orderID, quantity, iceLevel, sugarLevel, topping, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String updateEmpSql = "UPDATE employees SET orderNum = orderNum + 1 WHERE employeeID = ?";
+        String updateMenuSql = "UPDATE menu SET salesNum = salesNum + 1 WHERE menuID = ?";
+        String recipeSql = "SELECT inventoryID, itemQuantity FROM menu_items WHERE menuID = ?";
+        String deductInvSql = "UPDATE inventory SET inventoryNum = inventoryNum - ? WHERE inventoryID = ?";
 
         try (Connection conn = getConnection()) {
             conn.setAutoCommit(false);
             int oID = getNextID(conn, "orders", "orderID");
             double total = cartItems.stream().mapToDouble(CartItem::getCost).sum();
 
-            // insert into orders table
+            // Insert into orders table
             try (PreparedStatement ps = conn.prepareStatement(ordSql)) {
                 ps.setInt(1, oID);
                 ps.setString(2, customer);
@@ -329,9 +465,16 @@ public class Database {
                 ps.executeUpdate();
             }
 
+            // Update employee order count
+            try (PreparedStatement ps = conn.prepareStatement(updateEmpSql)) {
+                ps.setInt(1, empID);
+                ps.executeUpdate();
+            }
+
             for (CartItem item : cartItems) {
                 int itemID = getNextID(conn, "order_items", "ID");
 
+                // Insert into order_items table
                 try (PreparedStatement ps = conn.prepareStatement(itemSql)) {
                     ps.setInt(1, itemID);
                     ps.setInt(2, item.getMenuID());
@@ -343,13 +486,69 @@ public class Database {
                     ps.setDouble(8, item.getCost());
                     ps.executeUpdate();
                 }
+
+                // Update menu sales count
+                try (PreparedStatement ps = conn.prepareStatement(updateMenuSql)) {
+                    ps.setInt(1, item.getMenuID());
+                    ps.executeUpdate();
+                }
+
+                // Inventory deduction based on recipe
+                try (PreparedStatement psRecipe = conn.prepareStatement(recipeSql)) {
+                    psRecipe.setInt(1, item.getMenuID());
+                    try (ResultSet rs = psRecipe.executeQuery()) {
+                        while (rs.next()) {
+                            int invID = rs.getInt("inventoryID");
+                            int qtyToDeduct = rs.getInt("itemQuantity");
+                            try (PreparedStatement psDeduct = conn.prepareStatement(deductInvSql)) {
+                                psDeduct.setInt(1, qtyToDeduct);
+                                psDeduct.setInt(2, invID);
+                                psDeduct.executeUpdate();
+                            }
+                        }
+                    }
+                }
             }
 
             conn.commit();
-            System.out.println("[LOG] Order #" + oID + " finalized.");
+            System.out.println("[LOG] Order #" + oID + " finalized and inventory updated.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void restockItem(String itemName, int quantity) {
+        String sql = "UPDATE inventory SET inventoryNum = inventoryNum + ? WHERE name = ?";
+        try (Connection conn = getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setString(2, itemName);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static List<InventoryItem> getLowStockItems(int threshold) {
+        List<InventoryItem> items = new ArrayList<>();
+        String sql = "SELECT * FROM inventory WHERE inventoryNum < ? ORDER BY inventoryNum ASC";
+        try (Connection conn = getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, threshold);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    items.add(new InventoryItem(
+                            rs.getInt("inventoryID"),
+                            rs.getString("name"),
+                            rs.getDouble("cost"),
+                            rs.getInt("inventoryNum"),
+                            rs.getInt("useAverage")));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return items;
     }
 
     private static int getNextID(Connection conn, String table, String col) throws SQLException {
