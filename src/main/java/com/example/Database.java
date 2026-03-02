@@ -132,6 +132,57 @@ public class Database {
         }
     }
 
+    public static boolean addMenuItemWithIngredients(String name, double cost, Map<Integer, Integer> ingredientQtyByInventoryId) {
+        String menuSql = "INSERT INTO menu (menuID, name, cost, salesNum) VALUES (?, ?, ?, ?)";
+        String recipeSql = "INSERT INTO menu_items (ID, inventoryID, menuID, itemQuantity) VALUES (?, ?, ?, ?)";
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+            int menuID = getNextID(conn, "menu", "menuID");
+
+            try (PreparedStatement ps = conn.prepareStatement(menuSql)) {
+                ps.setInt(1, menuID);
+                ps.setString(2, name);
+                ps.setDouble(3, cost);
+                ps.setInt(4, 0);
+                ps.executeUpdate();
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(recipeSql)) {
+                for (Map.Entry<Integer, Integer> entry : ingredientQtyByInventoryId.entrySet()) {
+                    int recipeID = getNextID(conn, "menu_items", "ID");
+                    ps.setInt(1, recipeID);
+                    ps.setInt(2, entry.getKey());
+                    ps.setInt(3, menuID);
+                    ps.setInt(4, entry.getValue());
+                    ps.executeUpdate();
+                }
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    rollbackEx.printStackTrace();
+                }
+            }
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException closeEx) {
+                    closeEx.printStackTrace();
+                }
+            }
+        }
+    }
+
     public static boolean updateMenuItem(int menuID, String name, double cost) {
         String sql = "UPDATE menu SET name = ?, cost = ? WHERE menuID = ?";
         try (Connection conn = getConnection();

@@ -14,6 +14,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
@@ -22,6 +23,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -32,12 +34,26 @@ import javafx.stage.Stage;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 public class ManagerView {
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
     private final StackPane displayArea = new StackPane();
     private final VBox tableRowsContainer = new VBox();
+
+    private static class IngredientSelection {
+        private final InventoryItem item;
+        private final CheckBox selected;
+        private final TextField qtyField;
+
+        private IngredientSelection(InventoryItem item, CheckBox selected, TextField qtyField) {
+            this.item = item;
+            this.selected = selected;
+            this.qtyField = qtyField;
+        }
+    }
 
     public VBox getView() {
         VBox layout = new VBox(20);
@@ -163,6 +179,47 @@ public class ManagerView {
         nameField.setStyle(BORDER);
         priceField.setStyle(BORDER);
 
+        Label ingredientsLabel = new Label("Associated Inventory Ingredients");
+        ingredientsLabel.setStyle("-fx-font-weight: bold;");
+
+        FlowPane ingredientsFlow = new FlowPane();
+        ingredientsFlow.setHgap(10);
+        ingredientsFlow.setVgap(10);
+        ingredientsFlow.setPrefWrapLength(620);
+        List<InventoryItem> inventoryItems = Database.getAllInventory();
+        List<IngredientSelection> ingredientSelections = new java.util.ArrayList<>();
+        for (InventoryItem inventoryItem : inventoryItems) {
+            CheckBox useIngredient = new CheckBox(inventoryItem.getName());
+            TextField qtyField = new TextField();
+            qtyField.setPromptText("Qty used per drink");
+            qtyField.setPrefWidth(140);
+            qtyField.setDisable(true);
+            qtyField.setStyle(BORDER);
+
+            useIngredient.selectedProperty().addListener((obs, wasSelected, isSelected) -> {
+                qtyField.setDisable(!isSelected);
+                if (!isSelected) {
+                    qtyField.clear();
+                }
+            });
+
+            VBox ingredientCell = new VBox(8, useIngredient, qtyField);
+            ingredientCell.setPadding(new Insets(10));
+            ingredientCell.setStyle(BORDER + "-fx-background-color: white;");
+            ingredientCell.setPrefWidth(200);
+            ingredientsFlow.getChildren().add(ingredientCell);
+            ingredientSelections.add(new IngredientSelection(inventoryItem, useIngredient, qtyField));
+        }
+
+        ScrollPane ingredientsScroll = new ScrollPane(ingredientsFlow);
+        ingredientsScroll.setFitToWidth(true);
+        ingredientsScroll.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        ingredientsScroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: #ddd;");
+        ingredientsScroll.viewportBoundsProperty().addListener((obs, oldVal, newVal) ->
+                ingredientsFlow.setPrefWrapLength(Math.max(220, newVal.getWidth() - 20))
+        );
+        VBox.setVgrow(ingredientsScroll, Priority.ALWAYS);
+
         Label feedback = new Label();
         feedback.setStyle("-fx-text-fill: red;");
 
@@ -184,7 +241,30 @@ public class ManagerView {
                     return;
                 }
 
-                boolean inserted = Database.addMenuItem(name, price);
+                Map<Integer, Integer> ingredientMap = new HashMap<>();
+                for (IngredientSelection selection : ingredientSelections) {
+                    if (!selection.selected.isSelected()) {
+                        continue;
+                    }
+                    String qtyText = selection.qtyField.getText().trim();
+                    if (qtyText.isEmpty()) {
+                        feedback.setText("Selected ingredients need a quantity.");
+                        return;
+                    }
+                    int qty = Integer.parseInt(qtyText);
+                    if (qty <= 0) {
+                        feedback.setText("Ingredient quantities must be > 0.");
+                        return;
+                    }
+                    ingredientMap.put(selection.item.getInventoryID(), qty);
+                }
+
+                if (ingredientMap.isEmpty()) {
+                    feedback.setText("Select at least one inventory ingredient.");
+                    return;
+                }
+
+                boolean inserted = Database.addMenuItemWithIngredients(name, price, ingredientMap);
                 if (inserted) {
                     displayArea.getChildren().setAll(createMenuTab());
                     dialog.close();
@@ -192,12 +272,22 @@ public class ManagerView {
                     feedback.setText("Failed to add menu item.");
                 }
             } catch (NumberFormatException ex) {
-                feedback.setText("Price must be a number.");
+                feedback.setText("Price and ingredient quantities must be numeric.");
             }
         });
 
-        form.getChildren().addAll(new Label("New Menu Item"), nameField, priceField, confirm, feedback);
-        dialog.setScene(new Scene(form, 320, 280));
+        form.getChildren().addAll(
+                new Label("New Menu Item"),
+                nameField,
+                priceField,
+                ingredientsLabel,
+                ingredientsScroll,
+                confirm,
+                feedback
+        );
+        form.setFillWidth(true);
+        form.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        dialog.setScene(new Scene(form, 680, 620));
         dialog.show();
     }
 
