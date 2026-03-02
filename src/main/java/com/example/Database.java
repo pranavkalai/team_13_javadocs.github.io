@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -73,6 +74,19 @@ public class Database {
         public int getStock() {
             return stock;
         }
+    }
+
+    public static class InventoryUsageRow {
+        private final String inventoryItem;
+        private final int unitsUsed;
+
+        public InventoryUsageRow(String inventoryItem, int unitsUsed) {
+            this.inventoryItem = inventoryItem;
+            this.unitsUsed = unitsUsed;
+        }
+
+        public String getInventoryItem() { return inventoryItem; }
+        public int getUnitsUsed() { return unitsUsed; }
     }
 
     public static Connection getConnection() throws SQLException {
@@ -378,6 +392,46 @@ public class Database {
         return rows;
     }
 
+    public static List<InventoryUsageRow> getInventoryUsage(LocalDate startDateInclusive, LocalDate endDateInclusive) {
+        List<InventoryUsageRow> rows = new ArrayList<>();
+
+        LocalDateTime start = startDateInclusive.atStartOfDay();
+        LocalDateTime endExclusive = endDateInclusive.plusDays(1).atStartOfDay();
+
+        String sql = """
+            SELECT
+              i.name AS inventory_item,
+              SUM(oi.quantity * mi.itemQuantity)::int AS units_used
+            FROM orders o
+            JOIN order_items oi ON oi.orderID = o.orderID
+            JOIN menu_items mi ON mi.menuID = oi.menuID
+            JOIN inventory i ON i.inventoryID = mi.inventoryID
+            WHERE o.orderdatetime >= ?
+              AND o.orderdatetime < ?
+            GROUP BY i.name
+            ORDER BY units_used DESC;
+            """;
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(start));
+            ps.setTimestamp(2, Timestamp.valueOf(endExclusive));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new InventoryUsageRow(
+                            rs.getString("inventory_item"),
+                            rs.getInt("units_used")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return rows;
+    }
+
     public static List<StockLevelRow> getLowestStock(int limit) {
         List<StockLevelRow> rows = new ArrayList<>();
         String sql = "SELECT name, inventoryNum FROM inventory ORDER BY inventoryNum ASC LIMIT ?";
@@ -439,7 +493,6 @@ public class Database {
         }
         return true;
     }
-
     public static void submitOrder(String customer, int empID, List<CartItem> cartItems) {
         String ordSql = "INSERT INTO orders (orderID, customerName, costTotal, employeeID, orderDateTime) VALUES (?, ?, ?, ?, ?)";
         String itemSql = "INSERT INTO order_items (ID, menuID, orderID, quantity, iceLevel, sugarLevel, topping, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
