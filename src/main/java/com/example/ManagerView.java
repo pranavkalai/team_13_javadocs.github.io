@@ -31,7 +31,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;

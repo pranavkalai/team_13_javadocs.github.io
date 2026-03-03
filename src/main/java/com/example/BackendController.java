@@ -1,6 +1,8 @@
 package com.example;
 
 import java.util.List;
+import java.time.LocalDate;
+
 
 /**
  * Acts as the bridge between the Wireframe UI and the Data.
@@ -108,5 +110,9 @@ public class BackendController {
             System.out.println("[BACKEND ERROR] Restock failed for: " + itemName);
             e.printStackTrace();
         }
+    }
+
+    public static List<XReports> getXReports(LocalDate date) {
+        return Database.getXReports(date);
     }
 }
