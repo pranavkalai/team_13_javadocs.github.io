@@ -32,6 +32,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -67,28 +69,33 @@ public class ManagerView {
         Button trendsBtn = createTab("Trends");
         Button stockBtn = createTab("Stock");
         Button teamBtn = createTab("Team");
+        Button xBtn = createTab("X Reports");
 
         menuBtn.setOnAction(e -> {
-            updateTabStyle(menuBtn, trendsBtn, stockBtn, teamBtn);
+            updateTabStyle(menuBtn, trendsBtn, stockBtn, teamBtn, xBtn);
             displayArea.getChildren().setAll(createMenuTab());
         });
 
         trendsBtn.setOnAction(e -> {
-            updateTabStyle(trendsBtn, menuBtn, stockBtn, teamBtn);
+            updateTabStyle(trendsBtn, menuBtn, stockBtn, teamBtn, xBtn);
             displayArea.getChildren().setAll(createTrendsTab());
         });
 
         stockBtn.setOnAction(e -> {
-            updateTabStyle(stockBtn, menuBtn, trendsBtn, teamBtn);
+            updateTabStyle(stockBtn, menuBtn, trendsBtn, teamBtn, xBtn);
             displayArea.getChildren().setAll(createStockTab());
         });
 
         teamBtn.setOnAction(e -> {
-            updateTabStyle(teamBtn, menuBtn, trendsBtn, stockBtn);
+            updateTabStyle(teamBtn, menuBtn, trendsBtn, stockBtn, xBtn);
             displayArea.getChildren().setAll(createTeamTab());
         });
+        xBtn.setOnAction(e -> {
+            updateTabStyle(xBtn, menuBtn, trendsBtn, stockBtn, teamBtn);
+            displayArea.getChildren().setAll(createXReportsTab());
+        });
 
-        tabs.getChildren().addAll(menuBtn, trendsBtn, stockBtn, teamBtn);
+        tabs.getChildren().addAll(menuBtn, trendsBtn, stockBtn, teamBtn, xBtn);
         menuBtn.fire();
 
         displayArea.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -794,6 +801,70 @@ public class ManagerView {
             addEmployeeRow(emp);
         }
     }
+
+private VBox createXReportsTab() {
+    VBox container = new VBox(0);
+    container.setStyle("-fx-background-color: white;");
+
+    // Date picker controls
+    DatePicker datePicker = new DatePicker(LocalDate.now());
+    datePicker.setStyle(BORDER);
+    Button loadBtn = new Button("Load");
+    loadBtn.setStyle(BORDER + "-fx-background-color: white;");
+
+    HBox controls = new HBox(10, new Label("Date:"), datePicker, loadBtn);
+    controls.setStyle("-fx-padding: 10;");
+    container.getChildren().add(controls);
+
+    VBox reportArea = new VBox(0);
+    container.getChildren().add(reportArea);
+
+    Runnable loadReport = () -> {
+        reportArea.getChildren().clear();
+
+        List<XReports> report = BackendController.getXReports(datePicker.getValue());
+
+        Label header = new Label("X-Report  —  " + datePicker.getValue());
+        header.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-padding: 10 0 10 10;");
+
+        HBox titles = new HBox();
+        titles.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5 10;");
+        Label tHour  = new Label("HOUR");        tHour.setPrefWidth(150);
+        Label tSales = new Label("TOTAL SALES"); tSales.setPrefWidth(150);
+        Label tCount = new Label("ORDERS");      tCount.setPrefWidth(150);
+        titles.getChildren().addAll(tHour, tSales, tCount);
+        reportArea.getChildren().addAll(header, titles);
+
+        for (XReports entry : report) {
+            String hourLabel = LocalTime.of(entry.getHour(), 0)
+                               .format(DateTimeFormatter.ofPattern("h:mm a"));
+            HBox row = new HBox();
+            row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 8 10;");
+            Label lHour  = new Label(hourLabel);  lHour.setPrefWidth(150);
+            Label lSales = new Label(String.format("$%.2f", entry.getTotalAmount())); lSales.setPrefWidth(150);
+            Label lCount = new Label(String.valueOf(entry.getOrderCount()));           lCount.setPrefWidth(150);
+            row.getChildren().addAll(lHour, lSales, lCount);
+            reportArea.getChildren().add(row);
+        }
+
+        if (report.isEmpty()) {
+            Label empty = new Label("No sales recorded for this day.");
+            empty.setStyle("-fx-padding: 20; -fx-text-fill: gray;");
+            reportArea.getChildren().add(empty);
+        }
+    };
+
+    loadBtn.setOnAction(e -> loadReport.run());
+    loadReport.run(); // load today by default
+
+    ScrollPane scroll = new ScrollPane(container);
+    scroll.setFitToWidth(true);
+    scroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
+    VBox wrapper = new VBox(scroll);
+    VBox.setVgrow(scroll, Priority.ALWAYS);
+    return wrapper;
+}
+
 
     private void showAddEmployeeDialog() {
         Stage dialog = new Stage();
