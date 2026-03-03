@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS employees;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS menu_items;
+DROP TABLE IF EXISTS orders_today;
 
 CREATE TABLE inventory (
     inventoryID INT PRIMARY KEY, 
@@ -52,4 +53,10 @@ CREATE TABLE menu_items (
     inventoryID INT,
     menuID INT,
     itemQuantity INT
+);
+
+CREATE TABLE orders_today (
+    id SERIAL PRIMARY KEY,
+    sales DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
