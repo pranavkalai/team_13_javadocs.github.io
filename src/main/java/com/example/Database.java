@@ -105,6 +105,32 @@ public class Database {
         public double getTotalRevenue() { return totalRevenue; }
     }
 
+    public static class ZReportRow {
+        private final String employeeName;
+        private final int dailyOrders;
+
+        public ZReportRow(String employeeName, int dailyOrders) {
+            this.employeeName = employeeName;
+            this.dailyOrders = dailyOrders;
+        }
+
+        public String getEmployeeName() { return employeeName; }
+        public int getDailyOrders() { return dailyOrders; }
+    }
+
+    public static class ZReportData {
+        private final double totalSales;
+        private final List<ZReportRow> employeeOrders;
+
+        public ZReportData(double totalSales, List<ZReportRow> employeeOrders) {
+            this.totalSales = totalSales;
+            this.employeeOrders = employeeOrders;
+        }
+
+        public double getTotalSales() { return totalSales; }
+        public List<ZReportRow> getEmployeeOrders() { return employeeOrders; }
+    }
+
     public static class MenuIngredientRow {
         private final String ingredientName;
         private final int quantity;
@@ -745,6 +771,53 @@ public class Database {
                     
             }
             return reports;   
+    }
+
+    public static ZReportData getZReport() {
+        double totalSales = 0;
+        List<ZReportRow> employeeOrders = new ArrayList<>();
+
+        String salesSql = "SELECT sales FROM orders_today WHERE id = 1";
+        String empSql = """
+            SELECT e.name, COUNT(o.orderID) as daily_orders
+            FROM employees e
+            LEFT JOIN orders o ON e.employeeID = o.employeeID AND o.orderDateTime::date = CURRENT_DATE
+            GROUP BY e.name
+            ORDER BY daily_orders DESC
+            """;
+
+        try (Connection conn = getConnection()) {
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(salesSql)) {
+                if (rs.next()) {
+                    totalSales = rs.getDouble("sales");
+                }
+            }
+
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(empSql)) {
+                while (rs.next()) {
+                    employeeOrders.add(new ZReportRow(
+                        rs.getString("name"),
+                        rs.getInt("daily_orders")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new ZReportData(totalSales, employeeOrders);
+    }
+
+    public static void clearOrdersToday() {
+        String sql = "DELETE FROM orders_today";
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(sql);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
 
