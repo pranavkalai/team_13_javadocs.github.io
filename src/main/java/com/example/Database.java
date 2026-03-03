@@ -172,6 +172,29 @@ public class Database {
         return products;
     }
 
+    public static List<String> getMenuItemIngredientNames(int menuID) {
+        List<String> ingredients = new ArrayList<>();
+        String sql = """
+            SELECT i.name
+            FROM menu_items mi
+            JOIN inventory i ON i.inventoryID = mi.inventoryID
+            WHERE mi.menuID = ?
+            ORDER BY i.name;
+            """;
+        try (Connection conn = getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, menuID);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ingredients.add(rs.getString("name"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return ingredients;
+    }
+
     public static boolean addMenuItem(String name, double cost) {
         String sql = "INSERT INTO menu (menuID, name, cost, salesNum) VALUES (?, ?, ?, ?)";
         try (Connection conn = getConnection();

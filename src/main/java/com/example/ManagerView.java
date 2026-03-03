@@ -311,6 +311,33 @@ public class ManagerView {
         nameField.setStyle(BORDER);
         priceField.setStyle(BORDER);
 
+        Label ingredientsLabel = new Label("Associated Inventory Ingredients");
+        ingredientsLabel.setStyle("-fx-font-weight: bold;");
+
+        FlowPane ingredientsFlow = new FlowPane();
+        ingredientsFlow.setHgap(8);
+        ingredientsFlow.setVgap(8);
+        ingredientsFlow.setPrefWrapLength(300);
+        ingredientsFlow.setStyle("-fx-padding: 8;");
+
+        List<String> ingredientNames = Database.getMenuItemIngredientNames(product.getMenuID());
+        if (ingredientNames.isEmpty()) {
+            Label none = new Label("No linked inventory items.");
+            none.setStyle("-fx-text-fill: #666;");
+            ingredientsFlow.getChildren().add(none);
+        } else {
+            for (String ingredientName : ingredientNames) {
+                Label ingredientChip = new Label(ingredientName);
+                ingredientChip.setStyle(BORDER + "-fx-background-color: #f8f8f8; -fx-padding: 6 10;");
+                ingredientsFlow.getChildren().add(ingredientChip);
+            }
+        }
+
+        ScrollPane ingredientsScroll = new ScrollPane(ingredientsFlow);
+        ingredientsScroll.setFitToWidth(true);
+        ingredientsScroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: #ddd;");
+        ingredientsScroll.setPrefViewportHeight(140);
+
         Label feedback = new Label();
         feedback.setStyle("-fx-text-fill: red;");
 
@@ -370,8 +397,17 @@ public class ManagerView {
             }
         });
 
-        form.getChildren().addAll(new Label("Edit Menu Item"), nameField, priceField, confirm, deleteBtn, feedback);
-        dialog.setScene(new Scene(form, 320, 320));
+        form.getChildren().addAll(
+                new Label("Edit Menu Item"),
+                nameField,
+                priceField,
+                ingredientsLabel,
+                ingredientsScroll,
+                confirm,
+                deleteBtn,
+                feedback
+        );
+        dialog.setScene(new Scene(form, 380, 500));
         dialog.show();
     }
 
