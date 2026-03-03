@@ -374,8 +374,8 @@ public class ManagerView {
         VBox layout = new VBox(15);
         layout.setPadding(new Insets(10));
 
-        Label title = new Label("Inventory usage by time window");
-        title.setStyle("-fx-font-weight: bold;");
+        Label title = new Label("Trends & Analytics");
+        title.setStyle("-fx-font-weight: bold; -fx-font-size: 18;");
 
         DatePicker startPicker = new DatePicker(LocalDate.now().minusDays(7));
         DatePicker endPicker = new DatePicker(LocalDate.now());
@@ -383,7 +383,7 @@ public class ManagerView {
         startPicker.setStyle(BORDER);
         endPicker.setStyle(BORDER);
 
-        Button loadBtn = new Button("Load");
+        Button loadBtn = new Button("Load Reports");
         loadBtn.setStyle(BORDER + "-fx-background-color: white;");
 
         Label status = new Label();
@@ -397,20 +397,47 @@ public class ManagerView {
         );
         controls.setAlignment(Pos.CENTER_LEFT);
 
-        StackPane chartPane = new StackPane(new ProgressIndicator());
-        chartPane.setMinHeight(300);
-        chartPane.setStyle(BORDER);
+        // --- INVENTORY USAGE SECTION ---
+        Label invTitle = new Label("Inventory Usage");
+        invTitle.setStyle("-fx-font-weight: bold;");
 
-        TableView<Database.InventoryUsageRow> table = new TableView<>();
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        StackPane invChartPane = new StackPane(new ProgressIndicator());
+        invChartPane.setMinHeight(300);
+        invChartPane.setStyle(BORDER);
 
+        TableView<Database.InventoryUsageRow> invTable = new TableView<>();
+        invTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         TableColumn<Database.InventoryUsageRow, String> invCol = new TableColumn<>("Inventory item");
         invCol.setCellValueFactory(new PropertyValueFactory<>("inventoryItem"));
         TableColumn<Database.InventoryUsageRow, Integer> usedCol = new TableColumn<>("Units used");
         usedCol.setCellValueFactory(new PropertyValueFactory<>("unitsUsed"));
-        table.getColumns().setAll(invCol, usedCol);
+        invTable.getColumns().setAll(invCol, usedCol);
+        invTable.setPrefHeight(200);
 
-        VBox.setVgrow(table, Priority.ALWAYS);
+        // --- SALES REPORT SECTION ---
+        Label salesTitle = new Label("Sales Report");
+        salesTitle.setStyle("-fx-font-weight: bold;");
+
+        StackPane salesChartPane = new StackPane(new ProgressIndicator());
+        salesChartPane.setMinHeight(300);
+        salesChartPane.setStyle(BORDER);
+
+        TableView<Database.SalesReportRow> salesTable = new TableView<>();
+        salesTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        TableColumn<Database.SalesReportRow, String> itemCol = new TableColumn<>("Menu Item");
+        itemCol.setCellValueFactory(new PropertyValueFactory<>("menuItem"));
+        TableColumn<Database.SalesReportRow, Integer> qtyCol = new TableColumn<>("Qty Sold");
+        qtyCol.setCellValueFactory(new PropertyValueFactory<>("totalQuantity"));
+        TableColumn<Database.SalesReportRow, Double> revCol = new TableColumn<>("Revenue");
+        revCol.setCellValueFactory(new PropertyValueFactory<>("totalRevenue"));
+        salesTable.getColumns().setAll(itemCol, qtyCol, revCol);
+        salesTable.setPrefHeight(200);
+
+        VBox content = new VBox(15, invTitle, invChartPane, invTable, new Region(), salesTitle, salesChartPane, salesTable);
+        ScrollPane scroll = new ScrollPane(content);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
 
         Runnable runLoad = () -> {
             LocalDate start = startPicker.getValue();
@@ -429,33 +456,59 @@ public class ManagerView {
             status.setText("Loading…");
             status.setStyle("-fx-text-fill: #666;");
             loadBtn.setDisable(true);
-            chartPane.getChildren().setAll(new ProgressIndicator());
+            invChartPane.getChildren().setAll(new ProgressIndicator());
+            salesChartPane.getChildren().setAll(new ProgressIndicator());
 
-            CompletableFuture
-                    .supplyAsync(() -> Database.getInventoryUsage(start, end))
-                    .thenAccept(rows -> Platform.runLater(() -> {
-                        table.setItems(FXCollections.observableArrayList(rows));
-                        chartPane.getChildren().setAll(createInventoryUsageChart(rows));
-                        status.setText(rows.isEmpty() ? "No inventory usage in this range." : ("Loaded " + rows.size() + " items."));
-                        status.setStyle("-fx-text-fill: #666;");
-                        loadBtn.setDisable(false);
-                    }))
-                    .exceptionally(ex -> {
-                        Platform.runLater(() -> {
-                            chartPane.getChildren().setAll(errorPane(ex));
-                            status.setText("Failed to load.");
-                            status.setStyle("-fx-text-fill: #b00020;");
-                            loadBtn.setDisable(false);
-                        });
-                        return null;
-                    });
+            CompletableFuture<List<Database.InventoryUsageRow>> invFuture = CompletableFuture.supplyAsync(() -> Database.getInventoryUsage(start, end));
+            CompletableFuture<List<Database.SalesReportRow>> salesFuture = CompletableFuture.supplyAsync(() -> Database.getSalesReport(start, end));
+
+            invFuture.thenAcceptBoth(salesFuture, (invRows, salesRows) -> Platform.runLater(() -> {
+                invTable.setItems(FXCollections.observableArrayList(invRows));
+                invChartPane.getChildren().setAll(createInventoryUsageChart(invRows));
+
+                salesTable.setItems(FXCollections.observableArrayList(salesRows));
+                salesChartPane.getChildren().setAll(createSalesChart(salesRows));
+
+                status.setText("Loaded reports.");
+                status.setStyle("-fx-text-fill: #666;");
+                loadBtn.setDisable(false);
+            })).exceptionally(ex -> {
+                Platform.runLater(() -> {
+                    invChartPane.getChildren().setAll(errorPane(ex));
+                    salesChartPane.getChildren().setAll(errorPane(ex));
+                    status.setText("Failed to load.");
+                    status.setStyle("-fx-text-fill: #b00020;");
+                    loadBtn.setDisable(false);
+                });
+                return null;
+            });
         };
 
         loadBtn.setOnAction(e -> runLoad.run());
         runLoad.run();
 
-        layout.getChildren().addAll(title, controls, chartPane, table);
+        layout.getChildren().addAll(title, controls, scroll);
         return layout;
+    }
+
+    private Node createSalesChart(List<Database.SalesReportRow> rows) {
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setLabel("Menu Item");
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel("Revenue ($)");
+
+        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+        chart.setLegendVisible(false);
+        chart.setAnimated(false);
+
+        XYChart.Series<String, Number> s = new XYChart.Series<>();
+        int limit = Math.min(rows.size(), 12);
+        for (int i = 0; i < limit; i++) {
+            Database.SalesReportRow r = rows.get(i);
+            s.getData().add(new XYChart.Data<>(r.getMenuItem(), r.getTotalRevenue()));
+        }
+        chart.getData().setAll(s);
+        return chart;
     }
 
     private Node createInventoryUsageChart(List<Database.InventoryUsageRow> rows) {
