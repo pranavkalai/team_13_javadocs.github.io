@@ -89,6 +89,63 @@ public class Database {
         public int getUnitsUsed() { return unitsUsed; }
     }
 
+    public static class SalesReportRow {
+        private final String menuItem;
+        private final int totalQuantity;
+        private final double totalRevenue;
+
+        public SalesReportRow(String menuItem, int totalQuantity, double totalRevenue) {
+            this.menuItem = menuItem;
+            this.totalQuantity = totalQuantity;
+            this.totalRevenue = totalRevenue;
+        }
+
+        public String getMenuItem() { return menuItem; }
+        public int getTotalQuantity() { return totalQuantity; }
+        public double getTotalRevenue() { return totalRevenue; }
+    }
+
+    public static List<SalesReportRow> getSalesReport(LocalDate startDateInclusive, LocalDate endDateInclusive) {
+        List<SalesReportRow> rows = new ArrayList<>();
+
+        LocalDateTime start = startDateInclusive.atStartOfDay();
+        LocalDateTime endExclusive = endDateInclusive.plusDays(1).atStartOfDay();
+
+        String sql = """
+            SELECT
+              m.name AS menu_item,
+              SUM(oi.quantity)::int AS total_quantity,
+              SUM(oi.cost)::double precision AS total_revenue
+            FROM orders o
+            JOIN order_items oi ON o.orderID = oi.orderID
+            JOIN menu m ON oi.menuID = m.menuID
+            WHERE o.orderDateTime >= ?
+              AND o.orderDateTime < ?
+            GROUP BY m.name
+            ORDER BY total_revenue DESC;
+            """;
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(start));
+            ps.setTimestamp(2, Timestamp.valueOf(endExclusive));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new SalesReportRow(
+                            rs.getString("menu_item"),
+                            rs.getInt("total_quantity"),
+                            rs.getDouble("total_revenue")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return rows;
+    }
+
     public static Connection getConnection() throws SQLException {
         if (USER == null || PASSWORD == null) {
             throw new SQLException("Database credentials not set in environment variables (DB_USER, DB_PASSWORD)");
