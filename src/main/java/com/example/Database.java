@@ -665,4 +665,35 @@ public class Database {
             return rs.next() ? rs.getInt(1) + 1 : 1;
         }
     }
+
+    public static List<XReports> getXReports(LocalDate date) 
+    {
+        List<XReports> reports = new ArrayList<>();
+        String sql = "SELECT EXTRACT(HOUR FROM orderDateTime) AS hour, " +
+                 "SUM(costTotal) AS total_sales, " +
+                 "COUNT(*) AS order_count " +
+                 "FROM orders WHERE orderDateTime::date = ? " +
+                 "GROUP BY 1 ORDER BY 1";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql))
+             {
+                ps.setObject(1, date);
+
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) 
+                    {
+                        int hour = rs.getInt("hour");
+                        double totalSales = rs.getDouble("total_sales");
+                        int orderCount = rs.getInt("order_count");
+                        reports.add(new XReports(orderCount, hour, totalSales));
+                    }
+            } catch (SQLException e) 
+            {
+                e.printStackTrace();
+                    
+            }
+            return reports;   
+    }
 }
+
