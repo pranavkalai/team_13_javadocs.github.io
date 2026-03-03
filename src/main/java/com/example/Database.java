@@ -105,6 +105,24 @@ public class Database {
         public double getTotalRevenue() { return totalRevenue; }
     }
 
+    public static class MenuIngredientRow {
+        private final String ingredientName;
+        private final int quantity;
+
+        public MenuIngredientRow(String ingredientName, int quantity) {
+            this.ingredientName = ingredientName;
+            this.quantity = quantity;
+        }
+
+        public String getIngredientName() {
+            return ingredientName;
+        }
+
+        public int getQuantity() {
+            return quantity;
+        }
+    }
+
     public static List<SalesReportRow> getSalesReport(LocalDate startDateInclusive, LocalDate endDateInclusive) {
         List<SalesReportRow> rows = new ArrayList<>();
 
@@ -172,10 +190,10 @@ public class Database {
         return products;
     }
 
-    public static List<String> getMenuItemIngredientNames(int menuID) {
-        List<String> ingredients = new ArrayList<>();
+    public static List<MenuIngredientRow> getMenuItemIngredients(int menuID) {
+        List<MenuIngredientRow> ingredients = new ArrayList<>();
         String sql = """
-            SELECT i.name
+            SELECT i.name, mi.itemQuantity
             FROM menu_items mi
             JOIN inventory i ON i.inventoryID = mi.inventoryID
             WHERE mi.menuID = ?
@@ -186,7 +204,10 @@ public class Database {
             ps.setInt(1, menuID);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    ingredients.add(rs.getString("name"));
+                    ingredients.add(new MenuIngredientRow(
+                            rs.getString("name"),
+                            rs.getInt("itemQuantity")
+                    ));
                 }
             }
         } catch (SQLException e) {

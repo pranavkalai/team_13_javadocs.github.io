@@ -133,8 +133,7 @@ public class ManagerView {
         tableHead.getChildren().addAll(
                 createHeaderCell("NAME", 220),
                 createHeaderCell("PRICE", 120),
-                createHeaderCell("ACTIONS", 200)
-        );
+                createHeaderCell("ACTIONS", 200));
 
         VBox rowsContainer = new VBox();
         List<Product> products = Database.getAllProducts();
@@ -221,9 +220,8 @@ public class ManagerView {
         ingredientsScroll.setFitToWidth(true);
         ingredientsScroll.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         ingredientsScroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: #ddd;");
-        ingredientsScroll.viewportBoundsProperty().addListener((obs, oldVal, newVal) ->
-                ingredientsFlow.setPrefWrapLength(Math.max(220, newVal.getWidth() - 20))
-        );
+        ingredientsScroll.viewportBoundsProperty().addListener(
+                (obs, oldVal, newVal) -> ingredientsFlow.setPrefWrapLength(Math.max(220, newVal.getWidth() - 20)));
         VBox.setVgrow(ingredientsScroll, Priority.ALWAYS);
 
         Label feedback = new Label();
@@ -283,14 +281,13 @@ public class ManagerView {
         });
 
         form.getChildren().addAll(
-                new Label("New Menu Item"),
+                createBoldLabel("New Menu Item"),
                 nameField,
                 priceField,
                 ingredientsLabel,
                 ingredientsScroll,
                 confirm,
-                feedback
-        );
+                feedback);
         form.setFillWidth(true);
         form.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         dialog.setScene(new Scene(form, 680, 620));
@@ -320,14 +317,15 @@ public class ManagerView {
         ingredientsFlow.setPrefWrapLength(300);
         ingredientsFlow.setStyle("-fx-padding: 8;");
 
-        List<String> ingredientNames = Database.getMenuItemIngredientNames(product.getMenuID());
-        if (ingredientNames.isEmpty()) {
+        List<Database.MenuIngredientRow> ingredients = Database.getMenuItemIngredients(product.getMenuID());
+        if (ingredients.isEmpty()) {
             Label none = new Label("No linked inventory items.");
             none.setStyle("-fx-text-fill: #666;");
             ingredientsFlow.getChildren().add(none);
         } else {
-            for (String ingredientName : ingredientNames) {
-                Label ingredientChip = new Label(ingredientName);
+            for (Database.MenuIngredientRow ingredient : ingredients) {
+                Label ingredientChip = new Label(
+                        ingredient.getIngredientName() + " (" + ingredient.getQuantity() + ")");
                 ingredientChip.setStyle(BORDER + "-fx-background-color: #f8f8f8; -fx-padding: 6 10;");
                 ingredientsFlow.getChildren().add(ingredientChip);
             }
@@ -379,8 +377,7 @@ public class ManagerView {
                     Alert.AlertType.CONFIRMATION,
                     "Delete \"" + product.getName() + "\" from the menu?",
                     ButtonType.YES,
-                    ButtonType.NO
-            );
+                    ButtonType.NO);
             confirmDelete.setTitle("Confirm Delete");
             confirmDelete.setHeaderText("This action cannot be undone.");
             confirmDelete.initOwner(dialog);
@@ -398,17 +395,22 @@ public class ManagerView {
         });
 
         form.getChildren().addAll(
-                new Label("Edit Menu Item"),
+                createBoldLabel("Edit Menu Item"),
                 nameField,
                 priceField,
                 ingredientsLabel,
                 ingredientsScroll,
                 confirm,
                 deleteBtn,
-                feedback
-        );
+                feedback);
         dialog.setScene(new Scene(form, 380, 500));
         dialog.show();
+    }
+
+    private Label createBoldLabel(String text) {
+        Label label = new Label(text);
+        label.setStyle("-fx-font-weight: bold;");
+        return label;
     }
 
     // --- TRENDS TAB ---
@@ -435,8 +437,7 @@ public class ManagerView {
                 new Label("Start"), startPicker,
                 new Label("End"), endPicker,
                 loadBtn,
-                status
-        );
+                status);
         controls.setAlignment(Pos.CENTER_LEFT);
 
         // --- INVENTORY USAGE SECTION ---
@@ -475,7 +476,8 @@ public class ManagerView {
         salesTable.getColumns().setAll(itemCol, qtyCol, revCol);
         salesTable.setPrefHeight(200);
 
-        VBox content = new VBox(15, invTitle, invChartPane, invTable, new Region(), salesTitle, salesChartPane, salesTable);
+        VBox content = new VBox(15, invTitle, invChartPane, invTable, new Region(), salesTitle, salesChartPane,
+                salesTable);
         ScrollPane scroll = new ScrollPane(content);
         scroll.setFitToWidth(true);
         scroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
@@ -501,8 +503,10 @@ public class ManagerView {
             invChartPane.getChildren().setAll(new ProgressIndicator());
             salesChartPane.getChildren().setAll(new ProgressIndicator());
 
-            CompletableFuture<List<Database.InventoryUsageRow>> invFuture = CompletableFuture.supplyAsync(() -> Database.getInventoryUsage(start, end));
-            CompletableFuture<List<Database.SalesReportRow>> salesFuture = CompletableFuture.supplyAsync(() -> Database.getSalesReport(start, end));
+            CompletableFuture<List<Database.InventoryUsageRow>> invFuture = CompletableFuture
+                    .supplyAsync(() -> Database.getInventoryUsage(start, end));
+            CompletableFuture<List<Database.SalesReportRow>> salesFuture = CompletableFuture
+                    .supplyAsync(() -> Database.getSalesReport(start, end));
 
             invFuture.thenAcceptBoth(salesFuture, (invRows, salesRows) -> Platform.runLater(() -> {
                 invTable.setItems(FXCollections.observableArrayList(invRows));
@@ -707,8 +711,7 @@ public class ManagerView {
                     Alert.AlertType.CONFIRMATION,
                     "Delete \"" + item.getName() + "\" from inventory?",
                     ButtonType.YES,
-                    ButtonType.NO
-            );
+                    ButtonType.NO);
             confirmDelete.setTitle("Confirm Delete");
             confirmDelete.setHeaderText("This action cannot be undone.");
             confirmDelete.initOwner(dialog);
@@ -730,8 +733,7 @@ public class ManagerView {
                 new Label("Cost Per Unit"), priceField,
                 new Label("Current Quantity"), qtyField,
                 new Label("Usage Average"), avgField,
-                confirm, deleteBtn, feedback
-        );
+                confirm, deleteBtn, feedback);
         dialog.setScene(new Scene(form, 300, 450));
         dialog.show();
     }
@@ -793,8 +795,7 @@ public class ManagerView {
                 new Label("Cost Per Unit"), priceField,
                 new Label("Current Quantity"), qtyField,
                 new Label("Usage Average"), avgField,
-                confirm, feedback
-        );
+                confirm, feedback);
         dialog.setScene(new Scene(form, 300, 450));
         dialog.show();
     }
@@ -821,8 +822,7 @@ public class ManagerView {
         tableHead.getChildren().addAll(
                 createHeaderCell("NAME", 150), createHeaderCell("ROLE", 100),
                 createHeaderCell("PAY RATE", 100), createHeaderCell("ORDERS", 100),
-                createHeaderCell("ACTIONS", 100)
-        );
+                createHeaderCell("ACTIONS", 100));
 
         refreshTeamTable();
 
@@ -838,69 +838,74 @@ public class ManagerView {
         }
     }
 
-private VBox createXReportsTab() {
-    VBox container = new VBox(0);
-    container.setStyle("-fx-background-color: white;");
+    private VBox createXReportsTab() {
+        VBox container = new VBox(0);
+        container.setStyle("-fx-background-color: white;");
 
-    // Date picker controls
-    DatePicker datePicker = new DatePicker(LocalDate.now());
-    datePicker.setStyle(BORDER);
-    Button loadBtn = new Button("Load");
-    loadBtn.setStyle(BORDER + "-fx-background-color: white;");
+        // Date picker controls
+        DatePicker datePicker = new DatePicker(LocalDate.now());
+        datePicker.setStyle(BORDER);
+        Button loadBtn = new Button("Load");
+        loadBtn.setStyle(BORDER + "-fx-background-color: white;");
 
-    HBox controls = new HBox(10, new Label("Date:"), datePicker, loadBtn);
-    controls.setStyle("-fx-padding: 10;");
-    container.getChildren().add(controls);
+        HBox controls = new HBox(10, new Label("Date:"), datePicker, loadBtn);
+        controls.setStyle("-fx-padding: 10;");
+        container.getChildren().add(controls);
 
-    VBox reportArea = new VBox(0);
-    container.getChildren().add(reportArea);
+        VBox reportArea = new VBox(0);
+        container.getChildren().add(reportArea);
 
-    Runnable loadReport = () -> {
-        reportArea.getChildren().clear();
+        Runnable loadReport = () -> {
+            reportArea.getChildren().clear();
 
-        List<XReports> report = BackendController.getXReports(datePicker.getValue());
+            List<XReports> report = BackendController.getXReports(datePicker.getValue());
 
-        Label header = new Label("X-Report  —  " + datePicker.getValue());
-        header.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-padding: 10 0 10 10;");
+            Label header = new Label("X-Report  —  " + datePicker.getValue());
+            header.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-padding: 10 0 10 10;");
 
-        HBox titles = new HBox();
-        titles.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5 10;");
-        Label tHour  = new Label("HOUR");        tHour.setPrefWidth(150);
-        Label tSales = new Label("TOTAL SALES"); tSales.setPrefWidth(150);
-        Label tCount = new Label("ORDERS");      tCount.setPrefWidth(150);
-        titles.getChildren().addAll(tHour, tSales, tCount);
-        reportArea.getChildren().addAll(header, titles);
+            HBox titles = new HBox();
+            titles.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5 10;");
+            Label tHour = new Label("HOUR");
+            tHour.setPrefWidth(150);
+            Label tSales = new Label("TOTAL SALES");
+            tSales.setPrefWidth(150);
+            Label tCount = new Label("ORDERS");
+            tCount.setPrefWidth(150);
+            titles.getChildren().addAll(tHour, tSales, tCount);
+            reportArea.getChildren().addAll(header, titles);
 
-        for (XReports entry : report) {
-            String hourLabel = LocalTime.of(entry.getHour(), 0)
-                               .format(DateTimeFormatter.ofPattern("h:mm a"));
-            HBox row = new HBox();
-            row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 8 10;");
-            Label lHour  = new Label(hourLabel);  lHour.setPrefWidth(150);
-            Label lSales = new Label(String.format("$%.2f", entry.getTotalAmount())); lSales.setPrefWidth(150);
-            Label lCount = new Label(String.valueOf(entry.getOrderCount()));           lCount.setPrefWidth(150);
-            row.getChildren().addAll(lHour, lSales, lCount);
-            reportArea.getChildren().add(row);
-        }
+            for (XReports entry : report) {
+                String hourLabel = LocalTime.of(entry.getHour(), 0)
+                        .format(DateTimeFormatter.ofPattern("h:mm a"));
+                HBox row = new HBox();
+                row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 8 10;");
+                Label lHour = new Label(hourLabel);
+                lHour.setPrefWidth(150);
+                Label lSales = new Label(String.format("$%.2f", entry.getTotalAmount()));
+                lSales.setPrefWidth(150);
+                Label lCount = new Label(String.valueOf(entry.getOrderCount()));
+                lCount.setPrefWidth(150);
+                row.getChildren().addAll(lHour, lSales, lCount);
+                reportArea.getChildren().add(row);
+            }
 
-        if (report.isEmpty()) {
-            Label empty = new Label("No sales recorded for this day.");
-            empty.setStyle("-fx-padding: 20; -fx-text-fill: gray;");
-            reportArea.getChildren().add(empty);
-        }
-    };
+            if (report.isEmpty()) {
+                Label empty = new Label("No sales recorded for this day.");
+                empty.setStyle("-fx-padding: 20; -fx-text-fill: gray;");
+                reportArea.getChildren().add(empty);
+            }
+        };
 
-    loadBtn.setOnAction(e -> loadReport.run());
-    loadReport.run(); // load today by default
+        loadBtn.setOnAction(e -> loadReport.run());
+        loadReport.run(); // load today by default
 
-    ScrollPane scroll = new ScrollPane(container);
-    scroll.setFitToWidth(true);
-    scroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
-    VBox wrapper = new VBox(scroll);
-    VBox.setVgrow(scroll, Priority.ALWAYS);
-    return wrapper;
-}
-
+        ScrollPane scroll = new ScrollPane(container);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: transparent;");
+        VBox wrapper = new VBox(scroll);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        return wrapper;
+    }
 
     private void showAddEmployeeDialog() {
         Stage dialog = new Stage();
@@ -997,8 +1002,7 @@ private VBox createXReportsTab() {
                 createDataCell(emp.getJob(), 100),
                 createDataCell("$" + emp.getPay() + "/hr", 100),
                 createDataCell(String.valueOf(emp.getOrderNum()), 100),
-                new StackPane(editBtn)
-        );
+                new StackPane(editBtn));
         tableRowsContainer.getChildren().add(row);
     }
 
@@ -1023,4 +1027,3 @@ private VBox createXReportsTab() {
         return b;
     }
 }
-
