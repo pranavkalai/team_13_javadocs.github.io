@@ -601,6 +601,7 @@ public class Database {
         String updateMenuSql = "UPDATE menu SET salesNum = salesNum + 1 WHERE menuID = ?";
         String recipeSql = "SELECT inventoryID, itemQuantity FROM menu_items WHERE menuID = ?";
         String deductInvSql = "UPDATE inventory SET inventoryNum = inventoryNum - ? WHERE inventoryID = ?";
+        String updateTodaySql = "INSERT INTO orders_today (id, sales) VALUES (1, ?) ON CONFLICT (id) DO UPDATE SET sales = orders_today.sales + EXCLUDED.sales";
 
         try (Connection conn = getConnection()) {
             conn.setAutoCommit(false);
@@ -620,6 +621,12 @@ public class Database {
             // Update employee order count
             try (PreparedStatement ps = conn.prepareStatement(updateEmpSql)) {
                 ps.setInt(1, empID);
+                ps.executeUpdate();
+            }
+
+            // Update row 1 of orders_today
+            try (PreparedStatement ps = conn.prepareStatement(updateTodaySql)) {
+                ps.setDouble(1, total);
                 ps.executeUpdate();
             }
 
