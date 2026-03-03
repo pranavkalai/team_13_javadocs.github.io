@@ -70,32 +70,37 @@ public class ManagerView {
         Button stockBtn = createTab("Stock");
         Button teamBtn = createTab("Team");
         Button xBtn = createTab("X Reports");
+        Button zBtn = createTab("Z Reports");
 
         menuBtn.setOnAction(e -> {
-            updateTabStyle(menuBtn, trendsBtn, stockBtn, teamBtn, xBtn);
+            updateTabStyle(menuBtn, trendsBtn, stockBtn, teamBtn, xBtn, zBtn);
             displayArea.getChildren().setAll(createMenuTab());
         });
 
         trendsBtn.setOnAction(e -> {
-            updateTabStyle(trendsBtn, menuBtn, stockBtn, teamBtn, xBtn);
+            updateTabStyle(trendsBtn, menuBtn, stockBtn, teamBtn, xBtn, zBtn);
             displayArea.getChildren().setAll(createTrendsTab());
         });
 
         stockBtn.setOnAction(e -> {
-            updateTabStyle(stockBtn, menuBtn, trendsBtn, teamBtn, xBtn);
+            updateTabStyle(stockBtn, menuBtn, trendsBtn, teamBtn, xBtn, zBtn);
             displayArea.getChildren().setAll(createStockTab());
         });
 
         teamBtn.setOnAction(e -> {
-            updateTabStyle(teamBtn, menuBtn, trendsBtn, stockBtn, xBtn);
+            updateTabStyle(teamBtn, menuBtn, trendsBtn, stockBtn, xBtn, zBtn);
             displayArea.getChildren().setAll(createTeamTab());
         });
         xBtn.setOnAction(e -> {
-            updateTabStyle(xBtn, menuBtn, trendsBtn, stockBtn, teamBtn);
+            updateTabStyle(xBtn, menuBtn, trendsBtn, stockBtn, teamBtn, zBtn);
             displayArea.getChildren().setAll(createXReportsTab());
         });
+        zBtn.setOnAction(e -> {
+            updateTabStyle(zBtn, menuBtn, trendsBtn, stockBtn, teamBtn, xBtn);
+            displayArea.getChildren().setAll(createZReportsTab());
+        });
 
-        tabs.getChildren().addAll(menuBtn, trendsBtn, stockBtn, teamBtn, xBtn);
+        tabs.getChildren().addAll(menuBtn, trendsBtn, stockBtn, teamBtn, xBtn, zBtn);
         menuBtn.fire();
 
         displayArea.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -905,6 +910,69 @@ public class ManagerView {
         VBox wrapper = new VBox(scroll);
         VBox.setVgrow(scroll, Priority.ALWAYS);
         return wrapper;
+    }
+
+    private VBox createZReportsTab() {
+        VBox container = new VBox(20);
+        container.setPadding(new Insets(20));
+        container.setStyle("-fx-background-color: white;");
+
+        Label header = new Label("Z-Report (End of Day Summary)");
+        header.setStyle("-fx-font-weight: bold; -fx-font-size: 18;");
+
+        VBox reportContent = new VBox(15);
+        reportContent.setStyle(BORDER + "-fx-padding: 20;");
+
+        Label totalSalesLabel = new Label("Total Sales Today: $0.00");
+        totalSalesLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold;");
+
+        VBox empOrdersList = new VBox(5);
+        Label empHeader = new Label("Orders per Employee:");
+        empHeader.setStyle("-fx-font-weight: bold;");
+        empOrdersList.getChildren().add(empHeader);
+
+        Button generateBtn = new Button("Generate Z-Report & Clear Today's Sales");
+        generateBtn.setStyle(BORDER + "-fx-background-color: white; -fx-font-weight: bold;");
+        generateBtn.setPadding(new Insets(10, 20, 10, 20));
+
+        Runnable refreshZReport = () -> {
+            Database.ZReportData data = BackendController.getZReport();
+            totalSalesLabel.setText(String.format("Total Sales Today: $%.2f", data.getTotalSales()));
+            
+            empOrdersList.getChildren().clear();
+            empOrdersList.getChildren().add(empHeader);
+            for (Database.ZReportRow row : data.getEmployeeOrders()) {
+                Label l = new Label(row.getEmployeeName() + ": " + row.getDailyOrders() + " orders");
+                empOrdersList.getChildren().add(l);
+            }
+        };
+
+        generateBtn.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION, 
+                "Are you sure you want to generate the Z-Report and CLEAR all daily sales? This should only be done once at the end of the day.",
+                ButtonType.YES, ButtonType.NO);
+            alert.setGraphic(null);
+            alert.setTitle("Confirm Z-Report");
+            alert.setHeaderText("Action is Permanent");
+            
+            if (alert.showAndWait().orElse(ButtonType.NO) == ButtonType.YES) {
+                // Fetch final data to show success message
+                Database.ZReportData finalData = BackendController.getZReport();
+                BackendController.clearOrdersToday();
+                
+                Alert success = new Alert(Alert.AlertType.INFORMATION,
+                    String.format("Z-Report Successful!\nTotal Sales: $%.2f\nToday's data has been cleared.", finalData.getTotalSales()));
+                success.showAndWait();
+                
+                refreshZReport.run();
+            }
+        });
+
+        reportContent.getChildren().addAll(totalSalesLabel, empOrdersList, generateBtn);
+        container.getChildren().addAll(header, reportContent);
+        
+        refreshZReport.run();
+        return container;
     }
 
     private void showAddEmployeeDialog() {

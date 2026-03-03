@@ -115,4 +115,12 @@ public class BackendController {
     public static List<XReports> getXReports(LocalDate date) {
         return Database.getXReports(date);
     }
-}
+
+    public static Database.ZReportData getZReport() {
+        return Database.getZReport();
+    }
+
+    public static void clearOrdersToday() {
+        Database.clearOrdersToday();
+    }
+    }
