@@ -630,9 +630,12 @@ public class Database {
         String deductInvSql = "UPDATE inventory SET inventoryNum = inventoryNum - ? WHERE inventoryID = ?";
         String updateTodaySql = "INSERT INTO orders_today (id, sales) VALUES (1, ?) ON CONFLICT (id) DO UPDATE SET sales = orders_today.sales + EXCLUDED.sales";
 
-        try (Connection conn = getConnection()) {
+        Connection conn = null;
+        int oID = -1;
+        try {
+            conn = getConnection();
             conn.setAutoCommit(false);
-            int oID = getNextID(conn, "orders", "orderID");
+            oID = getNextID(conn, "orders", "orderID");
             double total = cartItems.stream().mapToDouble(CartItem::getCost).sum();
 
             // Insert into orders table
@@ -657,40 +660,39 @@ public class Database {
                 ps.executeUpdate();
             }
 
-            for (CartItem item : cartItems) {
-                int itemID = getNextID(conn, "order_items", "ID");
+            // Prepare statements outside loop for performance
+            try (PreparedStatement psItem = conn.prepareStatement(itemSql);
+                 PreparedStatement psMenu = conn.prepareStatement(updateMenuSql);
+                 PreparedStatement psRecipe = conn.prepareStatement(recipeSql);
+                 PreparedStatement psDeduct = conn.prepareStatement(deductInvSql)) {
 
-                // Insert into order_items table
-                try (PreparedStatement ps = conn.prepareStatement(itemSql)) {
-                    ps.setInt(1, itemID);
-                    ps.setInt(2, item.getMenuID());
-                    ps.setInt(3, oID);
-                    ps.setInt(4, 1); // quantity
-                    ps.setString(5, item.getIce());
-                    ps.setString(6, item.getSugar());
-                    ps.setString(7, item.getTopping());
-                    ps.setDouble(8, item.getCost());
-                    ps.executeUpdate();
-                }
+                for (CartItem item : cartItems) {
+                    int itemID = getNextID(conn, "order_items", "ID");
 
-                // Update menu sales count
-                try (PreparedStatement ps = conn.prepareStatement(updateMenuSql)) {
-                    ps.setInt(1, item.getMenuID());
-                    ps.executeUpdate();
-                }
+                    // Insert into order_items table
+                    psItem.setInt(1, itemID);
+                    psItem.setInt(2, item.getMenuID());
+                    psItem.setInt(3, oID);
+                    psItem.setInt(4, 1); // quantity
+                    psItem.setString(5, item.getIce());
+                    psItem.setString(6, item.getSugar());
+                    psItem.setString(7, item.getTopping());
+                    psItem.setDouble(8, item.getCost());
+                    psItem.executeUpdate();
 
-                // Inventory deduction based on recipe
-                try (PreparedStatement psRecipe = conn.prepareStatement(recipeSql)) {
+                    // Update menu sales count
+                    psMenu.setInt(1, item.getMenuID());
+                    psMenu.executeUpdate();
+
+                    // Inventory deduction based on recipe
                     psRecipe.setInt(1, item.getMenuID());
                     try (ResultSet rs = psRecipe.executeQuery()) {
                         while (rs.next()) {
                             int invID = rs.getInt("inventoryID");
                             int qtyToDeduct = rs.getInt("itemQuantity");
-                            try (PreparedStatement psDeduct = conn.prepareStatement(deductInvSql)) {
-                                psDeduct.setInt(1, qtyToDeduct);
-                                psDeduct.setInt(2, invID);
-                                psDeduct.executeUpdate();
-                            }
+                            psDeduct.setInt(1, qtyToDeduct);
+                            psDeduct.setInt(2, invID);
+                            psDeduct.executeUpdate();
                         }
                     }
                 }
@@ -699,7 +701,23 @@ public class Database {
             conn.commit();
             System.out.println("[LOG] Order #" + oID + " finalized and inventory updated.");
         } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                    System.err.println("[ERROR] Transaction rolled back for Order #" + (oID != -1 ? oID : "unknown"));
+                } catch (SQLException rollbackEx) {
+                    rollbackEx.printStackTrace();
+                }
+            }
             e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException closeEx) {
+                    closeEx.printStackTrace();
+                }
+            }
         }
     }
 
