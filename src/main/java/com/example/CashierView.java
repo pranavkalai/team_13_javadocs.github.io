@@ -1,5 +1,6 @@
 package com.example;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javafx.collections.FXCollections;
@@ -8,6 +9,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -182,7 +184,7 @@ public class CashierView {
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.setTitle("Customize " + drinkName);
 
-        VBox layout = new VBox(15);
+        VBox layout = new VBox(10);
         layout.setPadding(new Insets(20));
         layout.setStyle("-fx-background-color: white; " + BORDER);
 
@@ -192,28 +194,45 @@ public class CashierView {
         ComboBox<String> sugarBox = new ComboBox<>(FXCollections.observableArrayList("100%", "75%", "50%", "0%"));
         sugarBox.setValue("100%"); sugarBox.setMaxWidth(Double.MAX_VALUE);
 
-        ComboBox<String> toppingBox = new ComboBox<>(FXCollections.observableArrayList(
-            "None", "Pearls", "Jelly", "Pudding", "Grass Jelly", "Red Bean", "Aloe Vera", "Lychee Jelly"
-        ));
-        toppingBox.setValue("None"); toppingBox.setMaxWidth(Double.MAX_VALUE);
+        Label toppingLabel = new Label("TOPPINGS (+$0.50 each)");
+        toppingLabel.setStyle("-fx-font-weight: bold;");
+
+        VBox toppingsList = new VBox(5);
+        String[] toppingNames = {"Pearls", "Jelly", "Pudding", "Grass Jelly", "Red Bean", "Aloe Vera", "Lychee Jelly"};
+        List<CheckBox> checkBoxes = new ArrayList<>();
+        for (String t : toppingNames) {
+            CheckBox cb = new CheckBox(t);
+            checkBoxes.add(cb);
+            toppingsList.getChildren().add(cb);
+        }
+
+        ScrollPane toppingScroll = new ScrollPane(toppingsList);
+        toppingScroll.setPrefHeight(120);
+        toppingScroll.setFitToWidth(true);
+        toppingScroll.setStyle("-fx-background: white; -fx-background-color: white;");
 
         Button confirmBtn = new Button("ADD TO CART");
         confirmBtn.setMaxWidth(Double.MAX_VALUE);
         confirmBtn.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-background-radius: 0;");
         
         confirmBtn.setOnAction(e -> {
-            String selectedTopping = toppingBox.getValue();
-            double finalPrice = price;
-            if (selectedTopping != null && !selectedTopping.equals("None")) {
-                finalPrice += 0.50;
+            List<String> selectedToppings = new ArrayList<>();
+            for (CheckBox cb : checkBoxes) {
+                if (cb.isSelected()) {
+                    selectedToppings.add(cb.getText());
+                }
             }
-            cartItems.add(new CartItem(id, drinkName, finalPrice, iceBox.getValue(), sugarBox.getValue(), selectedTopping));
+            
+            String toppingsStr = selectedToppings.isEmpty() ? "None" : String.join(", ", selectedToppings);
+            double finalPrice = price + (selectedToppings.size() * 0.50);
+
+            cartItems.add(new CartItem(id, drinkName, finalPrice, iceBox.getValue(), sugarBox.getValue(), toppingsStr));
             updateCartUI();
             dialog.close();
         });
 
-        layout.getChildren().addAll(new Label("ICE"), iceBox, new Label("SUGAR"), sugarBox, new Label("TOPPING"), toppingBox, confirmBtn);
-        dialog.setScene(new Scene(layout, 300, 400));
+        layout.getChildren().addAll(new Label("ICE"), iceBox, new Label("SUGAR"), sugarBox, toppingLabel, toppingScroll, confirmBtn);
+        dialog.setScene(new Scene(layout, 350, 500));
         dialog.show();
     }
 
