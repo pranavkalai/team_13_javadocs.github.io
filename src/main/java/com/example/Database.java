@@ -859,5 +859,54 @@ public class Database {
             e.printStackTrace();
         }
     }
+
+    public static void updateMenuIngredients(int menuID, Map<Integer, Integer> ingredients)
+    {
+        String deleteSql = "DELETE FROM menu_items WHERE menuID = ?";
+        String insertSql = "INSERT INTO menu_items (ID, inventoryID, menuID, itemQuantity) VALUES (?, ?, ?, ?)";
+
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+
+            // Delete existing ingredients for the menu item
+            try (PreparedStatement ps = conn.prepareStatement(deleteSql)) {
+                ps.setInt(1, menuID);
+                ps.executeUpdate();
+            }
+
+            // Insert new ingredients
+            try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
+                for (Map.Entry<Integer, Integer> entry : ingredients.entrySet()) {
+                    int recipeID = getNextID(conn, "menu_items", "ID");
+                    ps.setInt(1, recipeID);
+                    ps.setInt(2, entry.getKey());
+                    ps.setInt(3, menuID);
+                    ps.setInt(4, entry.getValue());
+                    ps.executeUpdate();
+                }
+            }
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    rollbackEx.printStackTrace();
+                }
+            }
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException closeEx) {
+                    closeEx.printStackTrace();
+                }
+            }
+        }
+    }
 }
 

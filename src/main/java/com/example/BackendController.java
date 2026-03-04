@@ -2,6 +2,7 @@ package com.example;
 
 import java.util.List;
 import java.time.LocalDate;
+impot java.util.Map;
 
 
 /**
@@ -123,4 +124,10 @@ public class BackendController {
     public static void clearOrdersToday() {
         Database.clearOrdersToday();
     }
+
+    public static void setMenuIngredients(int menuID, Map<Integer, Integer> ingredients) 
+    {
+            Database.updateMenuIngredients(menuID, ingredients);
     }
+
+}
