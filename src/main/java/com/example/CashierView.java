@@ -192,7 +192,9 @@ public class CashierView {
         ComboBox<String> sugarBox = new ComboBox<>(FXCollections.observableArrayList("100%", "75%", "50%", "0%"));
         sugarBox.setValue("100%"); sugarBox.setMaxWidth(Double.MAX_VALUE);
 
-        ComboBox<String> toppingBox = new ComboBox<>(FXCollections.observableArrayList("None", "Pearls", "Jelly"));
+        ComboBox<String> toppingBox = new ComboBox<>(FXCollections.observableArrayList(
+            "None", "Pearls", "Jelly", "Pudding", "Grass Jelly", "Red Bean", "Aloe Vera", "Lychee Jelly"
+        ));
         toppingBox.setValue("None"); toppingBox.setMaxWidth(Double.MAX_VALUE);
 
         Button confirmBtn = new Button("ADD TO CART");
@@ -200,7 +202,12 @@ public class CashierView {
         confirmBtn.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-background-radius: 0;");
         
         confirmBtn.setOnAction(e -> {
-            cartItems.add(new CartItem(id, drinkName, price, iceBox.getValue(), sugarBox.getValue(), toppingBox.getValue()));
+            String selectedTopping = toppingBox.getValue();
+            double finalPrice = price;
+            if (selectedTopping != null && !selectedTopping.equals("None")) {
+                finalPrice += 0.50;
+            }
+            cartItems.add(new CartItem(id, drinkName, finalPrice, iceBox.getValue(), sugarBox.getValue(), selectedTopping));
             updateCartUI();
             dialog.close();
         });
