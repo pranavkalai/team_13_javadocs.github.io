@@ -77,20 +77,33 @@ public class Main extends Application {
         logo.setStyle("-fx-font-weight: bold; -fx-font-size: 20; -fx-padding: 20;");
 
         Button cashierBtn = createSideBtn("Cashier");
-        Button managerBtn = createSideBtn("Manager");
         Button switchBtn = createSideBtn("Switch Employee");
 
-        cashierBtn.setOnAction(e -> {
-            setActive(cashierBtn, managerBtn);
-            contentArea.getChildren().setAll(new CashierView(employeeID).getView());
-        });
-        managerBtn.setOnAction(e -> {
-            setActive(managerBtn, cashierBtn);
-            contentArea.getChildren().setAll(new ManagerView().getView());
-        });
-        switchBtn.setOnAction(e -> showEmployeeLogin(stage));
+        sidebar.getChildren().addAll(logo, cashierBtn);
 
-        sidebar.getChildren().addAll(logo, cashierBtn, managerBtn, switchBtn);
+        Employee currentEmployee = Database.getEmployeeByID(employeeID);
+        if (currentEmployee != null && currentEmployee.getJob().toLowerCase().contains("manager")) {
+            Button managerBtn = createSideBtn("Manager");
+            managerBtn.setOnAction(e -> {
+                setActive(managerBtn, cashierBtn);
+                contentArea.getChildren().setAll(new ManagerView().getView());
+            });
+            sidebar.getChildren().add(managerBtn);
+
+            cashierBtn.setOnAction(e -> {
+                setActive(cashierBtn, managerBtn);
+                contentArea.getChildren().setAll(new CashierView(employeeID).getView());
+            });
+        } else {
+            cashierBtn.setOnAction(e -> {
+                // only one button, so we just set it active
+                cashierBtn.setStyle("-fx-background-color: black; -fx-text-fill: white; " + BORDER);
+                contentArea.getChildren().setAll(new CashierView(employeeID).getView());
+            });
+        }
+
+        sidebar.getChildren().add(switchBtn);
+        switchBtn.setOnAction(e -> showEmployeeLogin(stage));
 
         // Main Body Container to fix resizing issues
         HBox body = new HBox(sidebar, contentArea);
