@@ -299,118 +299,143 @@ public class ManagerView {
         dialog.show();
     }
 
-    private void showEditMenuItemDialog(Product product) {
-        Stage dialog = new Stage();
-        dialog.initModality(Modality.APPLICATION_MODAL);
-        dialog.setTitle("Update Menu Item");
+private void showEditMenuItemDialog(Product product) {
+    Stage dialog = new Stage();
+    dialog.initModality(Modality.APPLICATION_MODAL);
+    dialog.setTitle("Update Menu Item");
 
-        VBox form = new VBox(10);
-        form.setPadding(new Insets(20));
-        form.setStyle(BORDER + "-fx-background-color: white;");
+    VBox form = new VBox(10);
+    form.setPadding(new Insets(20));
+    form.setStyle(BORDER + "-fx-background-color: white;");
 
-        TextField nameField = new TextField(product.getName());
-        TextField priceField = new TextField(String.format("%.2f", product.getCost()));
-        nameField.setStyle(BORDER);
-        priceField.setStyle(BORDER);
+    TextField nameField = new TextField(product.getName());
+    TextField priceField = new TextField(String.format("%.2f", product.getCost()));
+    nameField.setStyle(BORDER);
+    priceField.setStyle(BORDER);
 
-        Label ingredientsLabel = new Label("Associated Inventory Ingredients");
-        ingredientsLabel.setStyle("-fx-font-weight: bold;");
+    // Build ingredient checklist with current ingredients pre-checked
+    Label ingredientsLabel = new Label("Ingredients");
+    ingredientsLabel.setStyle("-fx-font-weight: bold;");
 
-        FlowPane ingredientsFlow = new FlowPane();
-        ingredientsFlow.setHgap(8);
-        ingredientsFlow.setVgap(8);
-        ingredientsFlow.setPrefWrapLength(300);
-        ingredientsFlow.setStyle("-fx-padding: 8;");
+    // Get current ingredients for this product so we can pre-fill
+    Map<String, Integer> currentIngredients = new HashMap<>();
+    for (Database.MenuIngredientRow row : Database.getMenuItemIngredients(product.getMenuID())) {
+        currentIngredients.put(row.getIngredientName(), row.getQuantity());
+    }
 
-        List<Database.MenuIngredientRow> ingredients = Database.getMenuItemIngredients(product.getMenuID());
-        if (ingredients.isEmpty()) {
-            Label none = new Label("No linked inventory items.");
-            none.setStyle("-fx-text-fill: #666;");
-            ingredientsFlow.getChildren().add(none);
-        } else {
-            for (Database.MenuIngredientRow ingredient : ingredients) {
-                Label ingredientChip = new Label(
-                        ingredient.getIngredientName() + " (" + ingredient.getQuantity() + ")");
-                ingredientChip.setStyle(BORDER + "-fx-background-color: #f8f8f8; -fx-padding: 6 10;");
-                ingredientsFlow.getChildren().add(ingredientChip);
-            }
+    FlowPane ingredientsFlow = new FlowPane();
+    ingredientsFlow.setHgap(10);
+    ingredientsFlow.setVgap(10);
+    ingredientsFlow.setPrefWrapLength(620);
+
+    List<IngredientSelection> ingredientSelections = new java.util.ArrayList<>();
+    for (InventoryItem item : Database.getAllInventory()) {
+        boolean alreadyUsed = currentIngredients.containsKey(item.getName());
+
+        CheckBox useIngredient = new CheckBox(item.getName());
+        useIngredient.setSelected(alreadyUsed);
+
+        TextField qtyField = new TextField();
+        qtyField.setPromptText("Qty per drink");
+        qtyField.setPrefWidth(120);
+        qtyField.setStyle(BORDER);
+        qtyField.setDisable(!alreadyUsed);
+        if (alreadyUsed) {
+            qtyField.setText(String.valueOf(currentIngredients.get(item.getName())));
         }
 
-        ScrollPane ingredientsScroll = new ScrollPane(ingredientsFlow);
-        ingredientsScroll.setFitToWidth(true);
-        ingredientsScroll.setStyle("-fx-background: white; -fx-background-color: white; -fx-border-color: #ddd;");
-        ingredientsScroll.setPrefViewportHeight(140);
+        useIngredient.selectedProperty().addListener((obs, was, isNow) -> {
+            qtyField.setDisable(!isNow);
+            if (!isNow) qtyField.clear();
+        });
 
-        Label feedback = new Label();
-        feedback.setStyle("-fx-text-fill: red;");
+        VBox cell = new VBox(5, useIngredient, qtyField);
+        cell.setPadding(new Insets(8));
+        cell.setStyle(BORDER + "-fx-background-color: white;");
+        cell.setPrefWidth(180);
+        ingredientsFlow.getChildren().add(cell);
+        ingredientSelections.add(new IngredientSelection(item, useIngredient, qtyField));
+    }
 
-        Button confirm = new Button("Update");
-        confirm.setStyle(BORDER);
-        confirm.setMaxWidth(Double.MAX_VALUE);
-        confirm.setOnAction(e -> {
-            String name = nameField.getText().trim();
-            String priceText = priceField.getText().trim();
-            if (name.isEmpty() || priceText.isEmpty()) {
-                feedback.setText("All fields are required.");
-                return;
-            }
+    ScrollPane ingredientsScroll = new ScrollPane(ingredientsFlow);
+    ingredientsScroll.setFitToWidth(true);
+    ingredientsScroll.setPrefHeight(250);
+    ingredientsScroll.setStyle("-fx-background: white; -fx-background-color: white;");
 
-            try {
-                double price = Double.parseDouble(priceText);
-                if (price < 0) {
-                    feedback.setText("Price must be non-negative.");
+    Label feedback = new Label();
+    feedback.setStyle("-fx-text-fill: red;");
+
+    Button confirm = new Button("Save Changes");
+    confirm.setStyle(BORDER);
+    confirm.setMaxWidth(Double.MAX_VALUE);
+    confirm.setOnAction(e -> {
+        String name = nameField.getText().trim();
+        String priceText = priceField.getText().trim();
+        if (name.isEmpty() || priceText.isEmpty()) {
+            feedback.setText("All fields are required.");
+            return;
+        }
+        try {
+            double price = Double.parseDouble(priceText);
+
+            Map<Integer, Integer> ingredientMap = new HashMap<>();
+            for (IngredientSelection sel : ingredientSelections) {
+                if (!sel.selected.isSelected()) continue;
+                String qtyText = sel.qtyField.getText().trim();
+                if (qtyText.isEmpty()) {
+                    feedback.setText("Selected ingredients need a quantity.");
                     return;
                 }
-
-                boolean updated = Database.updateMenuItem(product.getMenuID(), name, price);
-                if (updated) {
-                    displayArea.getChildren().setAll(createMenuTab());
-                    dialog.close();
-                } else {
-                    feedback.setText("Failed to update menu item.");
+                int qty = Integer.parseInt(qtyText);
+                if (qty <= 0) {
+                    feedback.setText("Quantities must be greater than 0.");
+                    return;
                 }
-            } catch (NumberFormatException ex) {
-                feedback.setText("Price must be a number.");
+                ingredientMap.put(sel.item.getInventoryID(), qty);
             }
-        });
 
-        Button deleteBtn = new Button("Delete Item");
-        deleteBtn.setStyle(BORDER + "-fx-background-color: white;");
-        deleteBtn.setMaxWidth(Double.MAX_VALUE);
-        deleteBtn.setOnAction(e -> {
-            Alert confirmDelete = new Alert(
-                    Alert.AlertType.CONFIRMATION,
-                    "Delete \"" + product.getName() + "\" from the menu?",
-                    ButtonType.YES,
-                    ButtonType.NO);
-            confirmDelete.setTitle("Confirm Delete");
-            confirmDelete.setHeaderText("This action cannot be undone.");
-            confirmDelete.initOwner(dialog);
+            boolean updatedItem = Database.updateMenuItem(product.getMenuID(), name, price);
+            BackendController.setMenuIngredients(product.getMenuID(), ingredientMap);
 
-            ButtonType result = confirmDelete.showAndWait().orElse(ButtonType.NO);
-            if (result == ButtonType.YES) {
-                boolean deleted = Database.deleteMenuItem(product.getMenuID());
-                if (deleted) {
-                    displayArea.getChildren().setAll(createMenuTab());
-                    dialog.close();
-                } else {
-                    feedback.setText("Failed to delete menu item.");
-                }
+            if (updatedItem) {
+                displayArea.getChildren().setAll(createMenuTab());
+                dialog.close();
+            } else {
+                feedback.setText("Failed to save changes.");
             }
-        });
+        } catch (NumberFormatException ex) {
+            feedback.setText("Price and quantities must be numeric.");
+        }
+    });
 
-        form.getChildren().addAll(
-                createBoldLabel("Edit Menu Item"),
-                nameField,
-                priceField,
-                ingredientsLabel,
-                ingredientsScroll,
-                confirm,
-                deleteBtn,
-                feedback);
-        dialog.setScene(new Scene(form, 380, 500));
-        dialog.show();
-    }
+    Button deleteBtn = new Button("Delete Item");
+    deleteBtn.setStyle(BORDER + "-fx-background-color: white;");
+    deleteBtn.setMaxWidth(Double.MAX_VALUE);
+    deleteBtn.setOnAction(e -> {
+        Alert confirmDelete = new Alert(Alert.AlertType.CONFIRMATION,
+                "Delete \"" + product.getName() + "\" from the menu?",
+                ButtonType.YES, ButtonType.NO);
+        confirmDelete.setTitle("Confirm Delete");
+        confirmDelete.setHeaderText("This action cannot be undone.");
+        confirmDelete.initOwner(dialog);
+        if (confirmDelete.showAndWait().orElse(ButtonType.NO) == ButtonType.YES) {
+            if (Database.deleteMenuItem(product.getMenuID())) {
+                displayArea.getChildren().setAll(createMenuTab());
+                dialog.close();
+            } else {
+                feedback.setText("Failed to delete.");
+            }
+        }
+    });
+
+    form.getChildren().addAll(
+            new Label("Edit Menu Item"), nameField, priceField,
+            ingredientsLabel, ingredientsScroll,
+            confirm, deleteBtn, feedback);
+    form.setFillWidth(true);
+    dialog.setScene(new Scene(form, 680, 580));
+    dialog.show();
+}
 
     private Label createBoldLabel(String text) {
         Label label = new Label(text);

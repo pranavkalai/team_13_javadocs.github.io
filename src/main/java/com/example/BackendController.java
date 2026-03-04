@@ -2,7 +2,7 @@ package com.example;
 
 import java.util.List;
 import java.time.LocalDate;
-impot java.util.Map;
+import java.util.Map;
 
 
 /**
@@ -113,6 +113,11 @@ public class BackendController {
         }
     }
 
+    // --- MANAGER LOGIC: X REPORT ---
+
+    /**
+     * Logic for the "X Reports" tab from database.
+     */
     public static List<XReports> getXReports(LocalDate date) {
         return Database.getXReports(date);
     }
@@ -125,6 +130,7 @@ public class BackendController {
         Database.clearOrdersToday();
     }
 
+    //menu ingredients modification
     public static void setMenuIngredients(int menuID, Map<Integer, Integer> ingredients) 
     {
             Database.updateMenuIngredients(menuID, ingredients);
