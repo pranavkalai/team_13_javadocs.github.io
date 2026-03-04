@@ -1,6 +1,5 @@
-package com.example;
 
-import io.github.cdimascio.dotenv.Dotenv;
+package com.example;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -15,6 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import io.github.cdimascio.dotenv.Dotenv;
 
 public class Database {
     private static final Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
@@ -734,6 +735,27 @@ public class Database {
             e.printStackTrace();
         }
         return items;
+    }
+
+    public static Employee getEmployeeByID(int employeeID) {
+        String sql = "SELECT * FROM employees WHERE employeeID = ?";
+        try (Connection conn = getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, employeeID);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new Employee(
+                            rs.getInt("employeeID"),
+                            rs.getString("name"),
+                            rs.getDouble("pay"),
+                            rs.getString("job"),
+                            rs.getInt("orderNum"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private static int getNextID(Connection conn, String table, String col) throws SQLException {

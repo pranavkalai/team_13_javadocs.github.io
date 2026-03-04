@@ -193,11 +193,12 @@ employees = []
 employee_order_tracker = {i + 1: 0 for i in range(NUM_EMPLOYEES)}
 
 for i in range(1, NUM_EMPLOYEES + 1):
+    job = "Manager" if i == 1 else "Barista"
     employees.append([
         i,
         f"Employee_{i}",
         round(random.uniform(12, 20), 2),
-        "Barista",
+        job,
         0 # orderNum (will be updated later)
     ])
 
