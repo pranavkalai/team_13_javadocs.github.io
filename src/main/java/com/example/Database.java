@@ -839,7 +839,7 @@ public class Database {
                 while (rs.next()) {
                     employeeOrders.add(new ZReportRow(
                         rs.getString("name"),
-                        rs.getInt("daily_orders")
+                        totalSales == 0 ? 0 : rs.getInt("daily_orders")
                     ));
                 }
             }

@@ -1,5 +1,13 @@
 package com.example;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
@@ -13,8 +21,8 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.DatePicker;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
@@ -22,8 +30,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -31,13 +39,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.CompletableFuture;
 
 public class ManagerView {
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
@@ -973,6 +974,13 @@ private void showEditMenuItemDialog(Product product) {
         };
 
         generateBtn.setOnAction(e -> {
+            if (BackendController.hasZReportRun()) {
+                Alert alreadyRun = new Alert(Alert.AlertType.WARNING,
+                    "Z-Report has already been run today.");
+                alreadyRun.showAndWait();
+                return;
+            }
+
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION, 
                 "Are you sure you want to generate the Z-Report and CLEAR all daily sales? This should only be done once at the end of the day.",
                 ButtonType.YES, ButtonType.NO);

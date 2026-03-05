@@ -10,6 +10,8 @@ import java.util.Map;
  */
 public class BackendController {
 
+    private static boolean isZReportRun = false;
+
     // --- CASHIER LOGIC ---
     public static List<Product> getMenu() {
         return Database.getAllProducts();
@@ -128,6 +130,11 @@ public class BackendController {
 
     public static void clearOrdersToday() {
         Database.clearOrdersToday();
+        isZReportRun = true;
+    }
+
+    public static boolean hasZReportRun() {
+        return isZReportRun;
     }
 
     //menu ingredients modification
