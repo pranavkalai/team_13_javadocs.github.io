@@ -40,16 +40,36 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+/**
+ * Provides the user interface for the Manager view.
+ * Allows managers to manage the menu, view trends, manage stock, and view team reports.
+ */
 public class ManagerView {
+    /** The border style for UI components. */
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
+    /** The main display area for tab content. */
     private final StackPane displayArea = new StackPane();
+    /** The container for table rows in the team view. */
     private final VBox tableRowsContainer = new VBox();
 
+    /**
+     * Helper class to track ingredient selection and quantity in dialogs.
+     */
     private static class IngredientSelection {
+        /** The inventory item being selected. */
         private final InventoryItem item;
+        /** The checkbox indicating if the item is selected. */
         private final CheckBox selected;
+        /** The text field for the quantity of the item. */
         private final TextField qtyField;
 
+        /**
+         * Constructs an IngredientSelection object.
+         *
+         * @param item      The inventory item.
+         * @param selected  The checkbox for selection.
+         * @param qtyField  The text field for quantity.
+         */
         private IngredientSelection(InventoryItem item, CheckBox selected, TextField qtyField) {
             this.item = item;
             this.selected = selected;
@@ -57,6 +77,11 @@ public class ManagerView {
         }
     }
 
+    /**
+     * Constructs and returns the root layout of the Manager view.
+     *
+     * @return The VBox containing the full Manager view.
+     */
     public VBox getView() {
         VBox layout = new VBox(20);
         layout.setPadding(new Insets(20));
@@ -110,6 +135,12 @@ public class ManagerView {
         return layout;
     }
 
+    /**
+     * Updates the style of the tabs to highlight the active one.
+     *
+     * @param active The active tab button.
+     * @param others The other tab buttons.
+     */
     private void updateTabStyle(Button active, Button... others) {
         active.setStyle(BORDER + "-fx-background-color: black; -fx-text-fill: white;");
         for (Button b : others) {
@@ -118,6 +149,12 @@ public class ManagerView {
     }
 
     // --- MENU TAB ---
+
+    /**
+     * Creates the layout for the Menu management tab.
+     *
+     * @return The VBox containing the menu management UI.
+     */
     private VBox createMenuTab() {
         VBox menuLayout = new VBox(10);
         menuLayout.setFillWidth(true);
@@ -158,6 +195,12 @@ public class ManagerView {
         return menuLayout;
     }
 
+    /**
+     * Creates a row for the menu table representing a product.
+     *
+     * @param product The product to represent.
+     * @return An HBox containing the product details and an "Edit" button.
+     */
     private HBox createMenuRow(Product product) {
         HBox row = new HBox();
         row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5;");
@@ -174,6 +217,9 @@ public class ManagerView {
         return row;
     }
 
+    /**
+     * Displays a dialog for adding a new menu item.
+     */
     private void showAddMenuItemDialog() {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -300,6 +346,11 @@ public class ManagerView {
         dialog.show();
     }
 
+    /**
+     * Displays a dialog for editing an existing menu item.
+     *
+     * @param product The product to edit.
+     */
 private void showEditMenuItemDialog(Product product) {
     Stage dialog = new Stage();
     dialog.initModality(Modality.APPLICATION_MODAL);
@@ -438,6 +489,12 @@ private void showEditMenuItemDialog(Product product) {
     dialog.show();
 }
 
+    /**
+     * Creates a bold label.
+     *
+     * @param text The text for the label.
+     * @return The created Label.
+     */
     private Label createBoldLabel(String text) {
         Label label = new Label(text);
         label.setStyle("-fx-font-weight: bold;");
@@ -445,6 +502,12 @@ private void showEditMenuItemDialog(Product product) {
     }
 
     // --- TRENDS TAB ---
+
+    /**
+     * Creates the layout for the Trends &amp; Analytics tab.
+     *
+     * @return The VBox containing the trends UI.
+     */
     private VBox createTrendsTab() {
         VBox layout = new VBox(15);
         layout.setPadding(new Insets(10));
@@ -568,6 +631,12 @@ private void showEditMenuItemDialog(Product product) {
         return layout;
     }
 
+    /**
+     * Creates a bar chart for sales revenue.
+     *
+     * @param rows The sales report data.
+     * @return The BarChart node.
+     */
     private Node createSalesChart(List<Database.SalesReportRow> rows) {
         CategoryAxis xAxis = new CategoryAxis();
         xAxis.setLabel("Menu Item");
@@ -588,6 +657,12 @@ private void showEditMenuItemDialog(Product product) {
         return chart;
     }
 
+    /**
+     * Creates a bar chart for inventory usage.
+     *
+     * @param rows The inventory usage data.
+     * @return The BarChart node.
+     */
     private Node createInventoryUsageChart(List<Database.InventoryUsageRow> rows) {
         CategoryAxis xAxis = new CategoryAxis();
         xAxis.setLabel("Inventory item");
@@ -608,6 +683,12 @@ private void showEditMenuItemDialog(Product product) {
         return chart;
     }
 
+    /**
+     * Creates an error pane to display exceptions.
+     *
+     * @param ex The exception to display.
+     * @return A StackPane containing the error message.
+     */
     private Node errorPane(Throwable ex) {
         String msg = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
         Label l = new Label("Failed to load trends.\n" + (msg == null ? "" : msg));
@@ -617,6 +698,12 @@ private void showEditMenuItemDialog(Product product) {
     }
 
     // --- STOCK TAB ---
+
+    /**
+     * Creates the layout for the Stock management tab.
+     *
+     * @return The VBox containing the stock management UI.
+     */
     private VBox createStockTab() {
         VBox stockLayout = new VBox(10);
         stockLayout.setFillWidth(true);
@@ -660,6 +747,12 @@ private void showEditMenuItemDialog(Product product) {
         return stockLayout;
     }
 
+    /**
+     * Creates a cell representing an inventory item.
+     *
+     * @param item The inventory item.
+     * @return A VBox representing the item.
+     */
     private VBox createStockCell(InventoryItem item) {
         VBox cell = new VBox(10);
         cell.setPadding(new Insets(15));
@@ -695,6 +788,11 @@ private void showEditMenuItemDialog(Product product) {
         return cell;
     }
 
+    /**
+     * Displays a dialog for editing an inventory item.
+     *
+     * @param item The inventory item to edit.
+     */
     private void showEditInventoryDialog(InventoryItem item) {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -769,6 +867,9 @@ private void showEditMenuItemDialog(Product product) {
         dialog.show();
     }
 
+    /**
+     * Displays a dialog for adding a new inventory item.
+     */
     private void showAddInventoryDialog() {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -832,6 +933,12 @@ private void showEditMenuItemDialog(Product product) {
     }
 
     // --- TEAM TAB ---
+
+    /**
+     * Creates the layout for the Team management tab.
+     *
+     * @return The VBox containing the team management UI.
+     */
     private VBox createTeamTab() {
         VBox teamLayout = new VBox(10);
         tableRowsContainer.getChildren().clear();
@@ -861,6 +968,9 @@ private void showEditMenuItemDialog(Product product) {
         return teamLayout;
     }
 
+    /**
+     * Refreshes the team roster table from the database.
+     */
     private void refreshTeamTable() {
         tableRowsContainer.getChildren().clear();
         List<Employee> employees = Database.getAllEmployees();
@@ -869,6 +979,11 @@ private void showEditMenuItemDialog(Product product) {
         }
     }
 
+    /**
+     * Creates the layout for the X-Reports tab.
+     *
+     * @return The VBox containing the X-Reports UI.
+     */
     private VBox createXReportsTab() {
         VBox container = new VBox(0);
         container.setStyle("-fx-background-color: white;");
@@ -938,6 +1053,11 @@ private void showEditMenuItemDialog(Product product) {
         return wrapper;
     }
 
+    /**
+     * Creates the layout for the Z-Reports tab.
+     *
+     * @return The VBox containing the Z-Reports UI.
+     */
     private VBox createZReportsTab() {
         VBox container = new VBox(20);
         container.setPadding(new Insets(20));
@@ -1008,6 +1128,9 @@ private void showEditMenuItemDialog(Product product) {
         return container;
     }
 
+    /**
+     * Displays a dialog for adding a new employee.
+     */
     private void showAddEmployeeDialog() {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -1046,6 +1169,11 @@ private void showEditMenuItemDialog(Product product) {
         dialog.show();
     }
 
+    /**
+     * Displays a dialog for editing an existing employee's details.
+     *
+     * @param emp The employee to edit.
+     */
     private void showEditEmployeeDialog(Employee emp) {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -1090,6 +1218,11 @@ private void showEditMenuItemDialog(Product product) {
         dialog.show();
     }
 
+    /**
+     * Adds an employee row to the team roster table.
+     *
+     * @param emp The employee to add.
+     */
     private void addEmployeeRow(Employee emp) {
         HBox row = new HBox();
         row.setStyle("-fx-border-color: transparent transparent black transparent; -fx-padding: 5;");
@@ -1107,6 +1240,13 @@ private void showEditMenuItemDialog(Product product) {
         tableRowsContainer.getChildren().add(row);
     }
 
+    /**
+     * Creates a header cell for a table.
+     *
+     * @param t The text for the header.
+     * @param w The width of the cell.
+     * @return The created Label.
+     */
     private Label createHeaderCell(String t, double w) {
         Label l = new Label(t);
         l.setPrefWidth(w);
@@ -1114,6 +1254,13 @@ private void showEditMenuItemDialog(Product product) {
         return l;
     }
 
+    /**
+     * Creates a data cell for a table.
+     *
+     * @param t The text for the cell.
+     * @param w The width of the cell.
+     * @return The created Label.
+     */
     private Label createDataCell(String t, double w) {
         Label l = new Label(t);
         l.setPrefWidth(w);
@@ -1121,6 +1268,12 @@ private void showEditMenuItemDialog(Product product) {
         return l;
     }
 
+    /**
+     * Creates a tab button.
+     *
+     * @param text The text for the tab.
+     * @return The created Button.
+     */
     private Button createTab(String text) {
         Button b = new Button(text);
         b.setPrefWidth(100);

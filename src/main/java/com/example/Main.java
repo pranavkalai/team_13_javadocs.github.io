@@ -13,16 +13,32 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import java.util.List;
 
+/**
+ * The main entry point for the Boba Shop POS application.
+ * Handles employee login and navigation between different views.
+ */
 public class Main extends Application {
+    /** The main content area of the application. */
     private StackPane contentArea = new StackPane();
+    /** CSS style for borders used in the application. */
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
 
+    /**
+     * Starts the JavaFX application.
+     *
+     * @param stage The primary stage for this application.
+     */
     @Override
     public void start(Stage stage) {
         stage.setTitle("BOBA SHOP POS");
         showEmployeeLogin(stage);
     }
 
+    /**
+     * Displays the employee login screen.
+     *
+     * @param stage The stage on which to display the login screen.
+     */
     public void showEmployeeLogin(Stage stage) {
         List<Employee> employees = Database.getAllEmployees();
         VBox layout = new VBox(10);
@@ -62,6 +78,12 @@ public class Main extends Application {
         stage.show();
     }
 
+    /**
+     * Launches the main application view after an employee logs in.
+     *
+     * @param stage      The stage on which to display the main application.
+     * @param employeeID The ID of the employee who logged in.
+     */
     private void launchMainApp(Stage stage, int employeeID) {
         contentArea = new StackPane(); // reset content area for new employee
         BorderPane root = new BorderPane();
@@ -120,6 +142,12 @@ public class Main extends Application {
         stage.setTitle("BOBA SHOP POS");
     }
 
+    /**
+     * Creates a sidebar button with the specified text.
+     *
+     * @param text The text to display on the button.
+     * @return The created button.
+     */
     private Button createSideBtn(String text) {
         Button b = new Button(text);
         b.setMaxWidth(Double.MAX_VALUE);
@@ -129,12 +157,23 @@ public class Main extends Application {
         return b;
     }
 
+    /**
+     * Sets the style of the active button and resets the style of the inactive button.
+     *
+     * @param active   The button to set as active.
+     * @param inactive The button to set as inactive.
+     */
     private void setActive(Button active, Button inactive) {
         active.setStyle("-fx-background-color: black; -fx-text-fill: white; " + BORDER);
         inactive.setStyle(
                 "-fx-background-color: white; -fx-text-fill: black; -fx-border-color: transparent transparent black transparent; -fx-background-radius: 0;");
     }
 
+    /**
+     * The main method that launches the application.
+     *
+     * @param args Command line arguments.
+     */
     public static void main(String[] args) {
         launch(args);
     }

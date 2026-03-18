@@ -24,23 +24,48 @@ import javafx.scene.shape.Line;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+/**
+ * Provides the user interface for the Cashier view.
+ * Allows employees to browse the menu, customize drinks, manage a cart, and place orders.
+ */
 public class CashierView {
+    /** The border style for UI components. */
     private final String BORDER = "-fx-border-color: black; -fx-border-width: 1; -fx-background-radius: 0; -fx-border-radius: 0;";
+    /** The list of items currently in the cart. */
     private ObservableList<CartItem> cartItems = FXCollections.observableArrayList();
+    /** The container for displaying cart items in the UI. */
     private VBox cartItemsContainer = new VBox(5);
+    /** The label displaying the number of items in the cart. */
     private Label cartLabel = new Label("Cart (0)");
+    /** The label displaying the total cost of items in the cart. */
     private Label totalLabel = new Label("Total: $0.00");
+    /** The placeholder displayed when the cart is empty. */
     private StackPane emptyCartPlaceholder = new StackPane(new Label("Cart Empty"));
+    /** The ID of the employee using the cashier view. */
     private final int employeeID;
 
-    //constructor to be used with login
+    /**
+     * Default constructor for CashierView.
+     * Sets a default employee ID of 1.
+     */
     public CashierView() {
         this.employeeID = 1; 
     }
+
+    /**
+     * Constructs a CashierView with a specific employee ID.
+     *
+     * @param employeeID The ID of the employee using this view.
+     */
     public CashierView(int employeeID) {
         this.employeeID = employeeID;
     }
 
+    /**
+     * Constructs and returns the root layout of the Cashier view.
+     *
+     * @return The HBox containing the full Cashier view.
+     */
     public HBox getView() {
         HBox layout = new HBox();
         layout.setStyle("-fx-background-color: white;");
@@ -52,7 +77,6 @@ public class CashierView {
         GridPane grid = new GridPane();
         grid.setHgap(20); grid.setVgap(20);
         
-        // List<Product> products = Database.getAllProducts();
         List<Product> products = BackendController.getMenu();
         int index = 0;
         for (Product p : products) {
@@ -89,6 +113,9 @@ public class CashierView {
         return layout;
     }
 
+    /**
+     * Displays the checkout dialog to enter customer name and select payment method.
+     */
     private void showCheckoutDialog() {
         Stage popup = new Stage();
         popup.initModality(Modality.APPLICATION_MODAL); 
@@ -99,18 +126,15 @@ public class CashierView {
         layout.setAlignment(Pos.CENTER);
         layout.setStyle("-fx-background-color: white; " + BORDER);
 
-        // --- ADDED: Customer Name Input ---
         Label nameLabel = new Label("CUSTOMER NAME:");
         nameLabel.setStyle("-fx-font-weight: bold;");
         TextField nameInput = new TextField();
         nameInput.setPromptText("Enter name...");
         nameInput.setMaxWidth(200);
-        // ----------------------------------
 
         Label title = new Label("SELECT PAYMENT METHOD");
         title.setStyle("-fx-font-weight: bold; -fx-font-size: 14;");
 
-        // Pass the nameInput reference to the payment buttons
         Button cashBtn = createPaymentBtn("CASH", popup, nameInput);
         Button creditBtn = createPaymentBtn("CREDIT", popup, nameInput);
         Button debitBtn = createPaymentBtn("DEBIT", popup, nameInput);
@@ -126,13 +150,20 @@ public class CashierView {
         popup.show();
     }
 
+    /**
+     * Creates a payment method button.
+     *
+     * @param text      The text to display on the button.
+     * @param popup     The checkout stage to close upon completion.
+     * @param nameInput The text field containing the customer's name.
+     * @return The created button.
+     */
     private Button createPaymentBtn(String text, Stage popup, TextField nameInput) {
         Button b = new Button(text);
         b.setPrefWidth(200); b.setPrefHeight(50);
         b.setStyle(BORDER + "-fx-background-color: white; -fx-font-weight: bold;");
         
         b.setOnAction(e -> {
-            // Fallback to "Guest" if the field is empty
             String customerName = nameInput.getText().trim();
             if (customerName.isEmpty()) {
                 customerName = "Guest";
@@ -142,8 +173,14 @@ public class CashierView {
         return b;
     }
 
+    /**
+     * Finalizes the order by communicating with the backend and updating the UI.
+     *
+     * @param method       The payment method used.
+     * @param popup        The checkout stage.
+     * @param customerName The name of the customer.
+     */
     private void finalizeOrder(String method, Stage popup, String customerName) {
-        // Capture success status from backend
         boolean success = BackendController.handlePlaceOrder(customerName, employeeID, cartItems);
         
         if (success) {
@@ -151,7 +188,6 @@ public class CashierView {
             updateCartUI();
             popup.close(); 
         } else {
-            // Show error if order failed (e.g., due to stock)
             javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
             alert.setTitle("Order Error");
             alert.setHeaderText("Order Failed");
@@ -160,6 +196,12 @@ public class CashierView {
         }
     }
 
+    /**
+     * Creates a card representation of a product for the menu.
+     *
+     * @param p The product to represent.
+     * @return A VBox containing the product details and an "Add" button.
+     */
     private VBox createProductCard(Product p) {
         VBox card = new VBox();
         card.setStyle(BORDER);
@@ -179,6 +221,13 @@ public class CashierView {
         return card;
     }
 
+    /**
+     * Displays a dialog for customizing a drink (ice, sugar, toppings).
+     *
+     * @param id        The ID of the drink being customized.
+     * @param drinkName The name of the drink.
+     * @param price     The base price of the drink.
+     */
     private void showCustomizationDialog(int id, String drinkName, double price) {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -236,6 +285,9 @@ public class CashierView {
         dialog.show();
     }
 
+    /**
+     * Updates the cart section of the UI with the current items and total.
+     */
     private void updateCartUI() {
         cartItemsContainer.getChildren().clear();
         emptyCartPlaceholder.setVisible(cartItems.isEmpty());
