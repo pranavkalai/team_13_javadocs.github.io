@@ -1,4 +1,4 @@
-package com.example;
+package com.teamMatcha.pos;
 
 import java.time.LocalDate;
 import java.time.LocalTime;

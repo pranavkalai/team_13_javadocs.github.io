@@ -1,4 +1,4 @@
-package com.example;
+package com.teamMatcha.pos;
 
 /**
  * Represents an item in the shopping cart.

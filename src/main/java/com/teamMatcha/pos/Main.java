@@ -1,4 +1,4 @@
-package com.example;
+package com.teamMatcha.pos;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;

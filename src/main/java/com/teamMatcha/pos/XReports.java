@@ -1,4 +1,4 @@
-package com.example;
+package com.teamMatcha.pos;
 
 /**
  * Represents an X-Report which provides a summary of orders and revenue for a specific hour.

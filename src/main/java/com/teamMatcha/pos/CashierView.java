@@ -1,4 +1,4 @@
-package com.example;
+package com.teamMatcha.pos;
 
 import java.util.ArrayList;
 import java.util.List;

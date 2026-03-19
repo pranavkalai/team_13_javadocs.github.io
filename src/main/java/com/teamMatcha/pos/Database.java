@@ -1,5 +1,5 @@
 
-package com.example;
+package com.teamMatcha.pos;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
